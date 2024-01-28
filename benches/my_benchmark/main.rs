@@ -10,7 +10,7 @@ use estimate::bench_estimate;
 use pprof::criterion::{Output, PProfProfiler};
 
 fn criterion_benchmark(c: &mut Criterion) {
-    //bench_estimate(c);
+    bench_estimate(c);
     bench_decompress(c)
 }
 
