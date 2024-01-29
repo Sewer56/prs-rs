@@ -1,8 +1,9 @@
 extern crate alloc;
+use alloc::alloc::{alloc, dealloc};
 use alloc::boxed::Box;
 use alloc::vec;
-use alloc::vec::Vec;
-use core::ptr::write;
+use core::ptr::{write, NonNull};
+use core::slice;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
 
 // Note: Usage of this dict can be improved to reduce memory usage at cost of low runtime overhead, however
@@ -10,78 +11,138 @@ use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
 // I don't consider it worthwhile to increase complexity (and reduce perf). If there's a memory constrained
 // scenario, I'll consider it however.
 
-/// An alias for the max allowed offset in this dictionary.
-/// We use u32 to be more cache friendly by default, although that limits us to 2GiB files.
-/// Replace this with 'u64' if you need to compress files larger than 2GiB. You will however double memory usage.
-pub(crate) type MaxOffset = u32;
+// In any case, this dictionary, when applied over a whole file, causes the compression operation to take
+// 4xFileSize amount of RAM.
 
+type MaxOffset = u32;
 const MAX_U16: usize = 65536;
+const ALLOC_ALIGNMENT: usize = 64; // x86 cache line
+
+// Round up to next multiple of ALLOC_ALIGNMENT
+const DICTIONARY_PADDING: usize =
+    (ALLOC_ALIGNMENT - (size_of::<[CompDictEntry; MAX_U16]>() % ALLOC_ALIGNMENT)) % ALLOC_ALIGNMENT;
 
 /// Dictionary for PRS compression.
 ///
 /// This dictionary stores the locations of every single possible place that a specified 2-byte sequence
 /// can be found, with the 2 byte combination being the dictionary 'key'. The values (locations) are
-/// stored inside a `Vec` in the [`CompDictEntry`] struct in ascending order.
+/// stored inside a shared buffer, where [`CompDictEntry`] dictates the first item offset. The items
+/// are stored in ascending order.
 ///
 /// When the compressor is looking for longest match at given address, it will read the 2 bytes at the
 /// address and use that as key [`CompDict::get_item`]. Then the offsets inside the returned entry
 /// will be used to greatly speed up search.
 pub(crate) struct CompDict {
-    dict: Box<[CompDictEntry; MAX_U16]>, // 2MiB on x64, else 1MiB
+    /// Our memory allocation is here.
+    /// Layout:
+    /// - [CompDictEntry; MAX_U16] (dict), constant size
+    /// - [MaxOffset; data_length] (offsets), variable size
+    buf: NonNull<MaxOffset>,
+    alloc_length: usize, // length of data that 'dict' and 'offsets' were made with
 }
 
-/// An individual entry in the [Compression Dictionary][`CompDict`].
+impl Drop for CompDict {
+    fn drop(&mut self) {
+        unsafe {
+            // dealloc buffer and box
+            let layout = Layout::from_size_align_unchecked(
+                size_of::<MaxOffset>() * self.alloc_length,
+                ALLOC_ALIGNMENT,
+            );
+            dealloc(self.buf.as_ptr() as *mut u8, layout);
+        }
+    }
+}
+
+/// An entry in [Compression Dictionary][`CompDict`].
 ///
-/// This is an index of 'current item' and accompanying `Vec` containing all offsets which start
-/// with the 2 byte sequence associated with this [`CompDictEntry`] inside the [`CompDict`].
+/// This has pointer to current 'last min offset' [`CompDictEntry::last_read_item`] in [`CompDict::offsets`] allocation,
+/// and pointer to last offset for the current 2 byte key.
 ///
-/// In the index we track the 'last item' we used, such that when we advance this entry, we can
-/// find the next offset that fits inside the LZ77 search window in effectively O(1) time.
+/// Last min offset [`CompDictEntry::last_read_item`] is advanced as items are sequentially read,
+/// i.e. when [`CompDict::get_item`] is called. This offset corresponds to the first item which had
+/// offset greater than `min_offset` parameter of last [`CompDict::get_item`] call.
 ///
-/// # Optimization Note
-///
-/// This item is 4*usize in size, which is 32 bytes on 64-bit systems, and 16 bytes otherwise.
-/// (Vec is 3*usize).
-///
-/// This is a good size, if the [`CompDict`] is allocated on a multiple of cache line size (64-bytes on x86),
-/// no items will span cache line boundaries. Making things pretty cache efficient.
+/// When compressing, this means we can find next matching offset in LZ77 search window
+/// in (effectively) O(1) time.
 #[derive(Clone)]
 pub(crate) struct CompDictEntry {
-    items: Vec<MaxOffset>,
-    current_item: usize,
+    /// Address of the last minimum offset from previous call to [`CompDict::get_item`].
+    last_read_item: *mut MaxOffset,
+    /// Item after last item within the [`CompDict::offsets`] allocation belonging to this entry.
+    last_item: *mut MaxOffset,
 }
 
 impl CompDict {
-    /// Create a new [`CompDict`] and initialize its entries.
+    /// Create a new [`CompDict`] from a given slice of bytes.
     ///
     /// # Parameters
-    /// - `freq_table` The frequency table for the data to be processed.
-    ///                You can get this by calling [`CompDict::create_frequency_table`].
-    pub(crate) fn new(freq_table: Box<[MaxOffset; MAX_U16]>) -> CompDict {
-        unsafe {
-            // Define the layout for our dictionary.
-            // We align 64 to match the cache line size on x86.
-            let layout =
-                Layout::from_size_align_unchecked(size_of::<[CompDictEntry; MAX_U16]>(), 64);
+    ///
+    /// - `data`: The data to create the dictionary from.
+    pub(crate) unsafe fn new(data: &[u8]) -> CompDict {
+        let freq_table = Self::create_frequency_table(data);
 
-            // Allocate the array on the heap
-            let ptr = alloc::alloc::alloc(layout);
+        // Preallocate the buffer Dict Entries and Offsets
+        let entry_section_len = size_of::<[CompDictEntry; MAX_U16]>(); // constant
+        let offset_section_len = size_of::<MaxOffset>() * data.len();
+        let alloc_size = entry_section_len + DICTIONARY_PADDING + offset_section_len;
 
-            // Initialize each item
-            let dict_entry_ptr = ptr as *mut CompDictEntry;
-            for i in 0..MAX_U16 {
-                core::ptr::write(
-                    // skip deallocating existing nonexisting items
-                    dict_entry_ptr.add(i),
-                    CompDictEntry {
-                        items: Vec::with_capacity(freq_table[i] as usize),
-                        current_item: 0,
-                    },
-                );
-            }
+        let layout = Layout::from_size_align_unchecked(alloc_size, ALLOC_ALIGNMENT);
+        let buf = alloc(layout);
 
-            let dict = Box::<[CompDictEntry; MAX_U16]>::from_raw(ptr.cast());
-            CompDict { dict }
+        let dict_entry_ptr = buf as *mut CompDictEntry;
+        let max_ofs_ptr = buf.add(entry_section_len + DICTIONARY_PADDING) as *mut MaxOffset;
+
+        // We will use this later to populate
+        let mut dict_insert_entry_ptrs = Box::<[*mut MaxOffset; MAX_U16]>::new_uninit();
+
+        // Initialize all CompDictEntries
+        let mut cur_ofs_addr = max_ofs_ptr;
+        let mut cur_dict_entry = dict_entry_ptr;
+        let mut cur_freq_tbl_entry = freq_table.as_ptr();
+        let mut cur_ofs_insert_ptr = dict_insert_entry_ptrs.as_mut_ptr() as *mut *mut MaxOffset;
+        let max_dict_entry = cur_dict_entry.add(MAX_U16);
+
+        while cur_dict_entry < max_dict_entry {
+            let num_items = *cur_freq_tbl_entry;
+            *cur_ofs_insert_ptr = cur_ofs_addr;
+
+            write(
+                cur_dict_entry,
+                CompDictEntry {
+                    last_read_item: cur_ofs_addr,
+                    last_item: cur_ofs_addr.add(num_items as usize),
+                },
+            );
+
+            cur_ofs_addr = cur_ofs_addr.add(num_items as usize);
+            cur_freq_tbl_entry = cur_freq_tbl_entry.add(1);
+            cur_dict_entry = cur_dict_entry.add(1);
+            cur_ofs_insert_ptr = cur_ofs_insert_ptr.add(1);
+        }
+
+        let mut dict_insert_entry_ptrs = dict_insert_entry_ptrs.assume_init();
+
+        // Iterate over the data, and add each 2-byte sequence to the dictionary.
+        let data_ptr_start = data.as_ptr();
+        let mut data_ptr = data.as_ptr();
+        let data_ptr_max = data.as_ptr().add(data.len() - 1);
+        debug_assert!(data.len() as MaxOffset <= MaxOffset::MAX);
+
+        while data_ptr < data_ptr_max {
+            let key = read_unaligned(data_ptr as *const u16);
+            let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
+
+            // Insert the offset into the dictionary
+            **insert_entry_ptr = data_ptr.sub(data_ptr_start as usize) as MaxOffset; // set offset
+            *insert_entry_ptr = (*insert_entry_ptr).add(1); // advance to next entry
+
+            data_ptr = data_ptr.add(1);
+        }
+
+        CompDict {
+            buf: NonNull::new_unchecked(buf as *mut MaxOffset),
+            alloc_length: alloc_size,
         }
     }
 
@@ -110,40 +171,11 @@ impl CompDict {
         }
     }
 
-    /// Create a new [`CompDict`] from a given slice of bytes.
-    ///
-    /// # Parameters
-    ///
-    /// - `data`: The data to create the dictionary from.
-    pub(crate) unsafe fn create(data: &[u8]) -> CompDict {
-        let freq_table = Self::create_frequency_table(data);
-        let mut dict = CompDict::new(freq_table);
-
-        // Iterate over the data, and add each 2-byte sequence to the dictionary.
-        let data_ptr = data.as_ptr();
-        let data_ofs_max = data.len() - 1;
-        let mut data_ofs = 0;
-        while data_ofs < data_ofs_max {
-            // LLVM successfully unrolls this
-            dict.add_item(
-                data_ofs as MaxOffset,
-                read_unaligned(data_ptr.add(data_ofs) as *const u16),
-                true,
-            );
-            data_ofs += 1;
-        }
-
-        dict
-    }
-
-    /// Adds an item to the Compression Dictionary [`CompDict`].
-    pub(crate) fn add_item(&mut self, offset: MaxOffset, key: u16, is_unchecked: bool) {
-        let entry = unsafe { &mut self.dict.get_unchecked_mut(key as usize) };
-        // Constant folded by LLVM
-        if is_unchecked {
-            push_unchecked(&mut entry.items, offset);
-        } else {
-            entry.items.push(offset);
+    /// Retrieves the dictionary entries section of this [`CompDict`].
+    pub fn get_dict_mut(&mut self) -> &mut [CompDictEntry; MAX_U16] {
+        unsafe {
+            let first_item = self.buf.as_ptr() as *mut CompDictEntry;
+            &mut *(first_item as *mut [CompDictEntry; MAX_U16])
         }
     }
 
@@ -156,40 +188,55 @@ impl CompDict {
     /// - `min_ofs`: The minimum offset returned in the slice.
     /// - `max_ofs`: The maximum offset returned in the slice.
     ///
-    /// # Remarks & Safety
+    /// # Safety
     ///
-    /// It is assumed that [`Self::get_item`] will always be called in a sequential manner.
-    /// Calling it out of order will result in undefined behaviour and most likely out of bounds reads.
+    /// This function is unsafe as it operates on raw pointers.
     pub(crate) unsafe fn get_item(
         &mut self,
         key: u16,
         min_ofs: usize,
         max_ofs: usize,
     ) -> &[MaxOffset] {
-        let entry = &mut self.dict[key as usize];
+        // Ensure that the key is within the bounds of the dictionary.
+        debug_assert!(key as usize <= MAX_U16, "Key is out of range!");
 
-        // Note that not checking `entry.items.len()` is technically unsafe, but assuming
-        // this method is correctly used, it's ok.
-        while *entry.items.get_unchecked(entry.current_item) < min_ofs as MaxOffset {
-            entry.current_item += 1;
+        let entry = &mut self.get_dict_mut()[key as usize];
+        let mut cur_last_read_item = entry.last_read_item;
+
+        // Advance the 'last_read_item' pointer to the first offset greater than or equal to min_ofs
+        while cur_last_read_item < entry.last_item && *cur_last_read_item < min_ofs as MaxOffset {
+            cur_last_read_item = cur_last_read_item.add(1);
+        }
+        entry.last_read_item = cur_last_read_item;
+
+        // Find the end of the range - the first offset greater than max_ofs
+        let mut end = entry.last_read_item;
+        while end < entry.last_item && *end <= max_ofs as MaxOffset {
+            end = end.add(1);
         }
 
-        // Find the index of the first item that exceeds max_ofs
-        let end_index = entry
-            .items
-            .iter()
-            .position(|&offset| offset > max_ofs as MaxOffset)
-            .unwrap_or(entry.items.len());
-
-        entry.items.get_unchecked(entry.current_item..end_index)
+        // Create a slice from the updated range
+        slice::from_raw_parts(
+            cur_last_read_item,
+            end.offset_from(cur_last_read_item) as usize,
+        )
     }
 }
 
-fn push_unchecked<T>(vec: &mut Vec<T>, value: T) {
-    unsafe {
-        let len = vec.len();
-        write(vec.as_mut_ptr().add(len), value);
-        vec.set_len(len + 1);
+impl CompDictEntry {
+    /// Returns a slice of offsets between `last_read_item` and `last_item`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe as it operates on raw pointers.
+    /// The caller must ensure that `last_read_item` and `last_item` are valid.
+    #[cfg(test)]
+    pub unsafe fn get_items(&mut self) -> &[MaxOffset] {
+        // Calculate the length of the slice by finding the distance between the pointers.
+        let length = self.last_item.offset_from(self.last_read_item) as usize;
+
+        // Create and return a slice from the raw pointers.
+        slice::from_raw_parts(self.last_read_item, length)
     }
 }
 
@@ -198,64 +245,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn can_add_item() {
-        // Add an item with key 0x4141 and ensure it exists.
-        let boxed_slice = vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
-        let mut comp_dict = CompDict::new(boxed_slice);
-        comp_dict.add_item(0, 0x4141, false);
-
-        let entry = &comp_dict.dict[0x4141];
-        assert_eq!(entry.items, vec![0]);
-    }
-
-    #[test]
-    fn can_get_item() {
-        unsafe {
-            // Add multiple offsets at the same key, and ensure they are returned.
-            let boxed_slice = vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
-            let mut comp_dict = CompDict::new(boxed_slice);
-            comp_dict.add_item(0, 0x4141, false);
-            comp_dict.add_item(1, 0x4141, false);
-            comp_dict.add_item(2, 0x4141, false);
-            comp_dict.add_item(3, 0x4141, false);
-            comp_dict.add_item(4, 0x4141, false);
-            comp_dict.add_item(5, 0x4141, false);
-            comp_dict.add_item(6, 0x4141, false);
-            comp_dict.add_item(7, 0x4141, false);
-            comp_dict.add_item(8, 0x4141, false);
-            comp_dict.add_item(9, 0x4141, false);
-
-            let result = comp_dict.get_item(0x4141, 1, 2);
-            assert_eq!(&[1, 2], result);
-
-            // Ensure pointer was advanced
-            assert_eq!(comp_dict.dict[0x4141].current_item, 1);
-
-            // Access the next in sequence, and ensure it was correctly advanced.
-            let result = comp_dict.get_item(0x4141, 2, 3);
-            assert_eq!(&[2, 3], result);
-            assert_eq!(comp_dict.dict[0x4141].current_item, 2);
-
-            // Change in max offset shouldn't change current item
-            let result = comp_dict.get_item(0x4141, 2, 9);
-            assert_eq!(&[2, 3, 4, 5, 6, 7, 8, 9], result);
-            assert_eq!(comp_dict.dict[0x4141].current_item, 2);
-        }
-    }
-
-    #[test]
     fn can_create_dict() {
         unsafe {
-            let data = &[0x41, 0x42, 0x43];
-            let comp_dict = CompDict::create(data);
+            let data = &[0x41, 0x42, 0x43, 0x41, 0x41, 0x41, 0x41, 0x41];
+            let mut comp_dict = CompDict::new(data);
 
-            // Prevent dead code elimination.
-            assert!(
-                comp_dict.dict.len() > 0,
-                "CompDict was not created correctly"
+            // Assert that the items were correctly inserted.
+            assert_eq!(
+                comp_dict.get_dict_mut()[0x4241_u16.to_le() as usize].get_items(),
+                &[0]
             );
-            assert_eq!(comp_dict.dict[0x4241_u16.to_le() as usize].items, vec![0]);
-            assert_eq!(comp_dict.dict[0x4342_u16.to_le() as usize].items, vec![1]);
+            assert_eq!(
+                comp_dict.get_dict_mut()[0x4342_u16.to_le() as usize].get_items(),
+                &[1]
+            );
+
+            // Ensure we can get a slice.
+            let result = comp_dict.get_item(0x4141, 3, 4);
+            assert_eq!(&[3, 4], result);
+
+            // Access the next in sequence, and ensure it was correctly advanced.
+            let result = comp_dict.get_item(0x4141, 4, 5);
+            assert_eq!(&[4, 5], result);
+            assert_eq!(*comp_dict.get_dict_mut()[0x4141].last_read_item, 4);
+
+            // Access beyond end of sequence
+            let result = comp_dict.get_item(0x4141, 5, 7);
+            assert_eq!(&[5, 6], result);
         }
     }
 }

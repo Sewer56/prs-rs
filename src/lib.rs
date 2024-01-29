@@ -1,5 +1,5 @@
 #![cfg_attr(not(test), no_std)]
-#![feature(allocator_api)]
+#![feature(new_uninit)]
 
 pub mod comp;
 pub mod decomp;
