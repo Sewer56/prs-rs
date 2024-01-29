@@ -1,7 +1,9 @@
+mod createcompdict;
 mod decompress;
 mod estimate;
 mod util;
 
+use createcompdict::bench_create_dict;
 use criterion::{criterion_group, criterion_main, Criterion};
 use decompress::bench_decompress;
 use estimate::bench_estimate;
@@ -10,8 +12,9 @@ use estimate::bench_estimate;
 use pprof::criterion::{Output, PProfProfiler};
 
 fn criterion_benchmark(c: &mut Criterion) {
-    bench_estimate(c);
-    bench_decompress(c)
+    //bench_estimate(c);
+    //bench_decompress(c);
+    bench_create_dict(c);
 }
 
 #[cfg(not(target_os = "windows"))]

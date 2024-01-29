@@ -1,10 +1,16 @@
 //! # Some Cool Reloaded Library
 //! Here's the crate documentation.
+pub mod comp;
 pub mod decomp;
 pub mod exports;
 pub mod util;
 
 pub mod impls {
+    pub mod comp {
+        pub mod comp_dict;
+        pub mod compress;
+    }
+
     pub mod decomp {
         pub(crate) mod common;
         pub mod decompress;

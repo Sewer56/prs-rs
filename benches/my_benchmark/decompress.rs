@@ -1,7 +1,7 @@
+use crate::util::{get_compressed_file_path, load_sample_file};
 use criterion::Criterion;
 use prs_rs::decomp::{prs_calculate_decompressed_size, prs_decompress_unsafe};
 
-use crate::util::{get_compressed_file_path, load_sample_file};
 pub fn bench_decompress(c: &mut Criterion) {
     let file_names = vec!["Model.bin", "ObjectLayout.bin", "WorstCase.bin"];
 
