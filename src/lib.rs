@@ -1,5 +1,6 @@
-//! # Some Cool Reloaded Library
-//! Here's the crate documentation.
+#![cfg_attr(not(test), no_std)]
+#![feature(allocator_api)]
+
 pub mod comp;
 pub mod decomp;
 pub mod exports;

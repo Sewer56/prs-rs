@@ -1,4 +1,8 @@
 extern crate alloc;
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::ptr::write;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
 
 // Note: Usage of this dict can be improved to reduce memory usage at cost of low runtime overhead, however
@@ -49,7 +53,11 @@ pub(crate) struct CompDictEntry {
 
 impl CompDict {
     /// Create a new [`CompDict`] and initialize its entries.
-    pub(crate) fn new() -> CompDict {
+    ///
+    /// # Parameters
+    /// - `freq_table` The frequency table for the data to be processed.
+    ///                You can get this by calling [`CompDict::create_frequency_table`].
+    pub(crate) fn new(freq_table: Box<[MaxOffset; MAX_U16]>) -> CompDict {
         unsafe {
             // Define the layout for our dictionary.
             // We align 64 to match the cache line size on x86.
@@ -66,7 +74,7 @@ impl CompDict {
                     // skip deallocating existing nonexisting items
                     dict_entry_ptr.add(i),
                     CompDictEntry {
-                        items: Vec::new(),
+                        items: Vec::with_capacity(freq_table[i] as usize),
                         current_item: 0,
                     },
                 );
@@ -77,22 +85,50 @@ impl CompDict {
         }
     }
 
+    /// Creates a frequency table for the given data.
+    ///
+    /// # Parameters
+    /// - `data`: The data to create the frequency table from.
+    pub(crate) fn create_frequency_table(data: &[u8]) -> Box<[MaxOffset; MAX_U16]> {
+        unsafe {
+            // This actually has no overhead.
+            let mut result: Box<[MaxOffset; MAX_U16]> =
+                vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
+
+            // Iterate over the data, and add each 2-byte sequence to the dictionary.
+            let data_ptr = data.as_ptr();
+            let data_ofs_max = data.len() - 1;
+            let mut data_ofs = 0;
+            while data_ofs < data_ofs_max {
+                // LLVM successfully unrolls this
+                let index = read_unaligned(data_ptr.add(data_ofs) as *const u16);
+                result[index as usize] += 1;
+                data_ofs += 1;
+            }
+
+            result
+        }
+    }
+
     /// Create a new [`CompDict`] from a given slice of bytes.
     ///
     /// # Parameters
     ///
     /// - `data`: The data to create the dictionary from.
     pub(crate) unsafe fn create(data: &[u8]) -> CompDict {
-        let mut dict = CompDict::new();
+        let freq_table = Self::create_frequency_table(data);
+        let mut dict = CompDict::new(freq_table);
 
         // Iterate over the data, and add each 2-byte sequence to the dictionary.
         let data_ptr = data.as_ptr();
         let data_ofs_max = data.len() - 1;
         let mut data_ofs = 0;
         while data_ofs < data_ofs_max {
+            // LLVM successfully unrolls this
             dict.add_item(
                 data_ofs as MaxOffset,
                 read_unaligned(data_ptr.add(data_ofs) as *const u16),
+                true,
             );
             data_ofs += 1;
         }
@@ -101,9 +137,14 @@ impl CompDict {
     }
 
     /// Adds an item to the Compression Dictionary [`CompDict`].
-    pub(crate) fn add_item(&mut self, offset: MaxOffset, key: u16) {
-        let entry = &mut self.dict[key as usize];
-        entry.items.push(offset);
+    pub(crate) fn add_item(&mut self, offset: MaxOffset, key: u16, is_unchecked: bool) {
+        let entry = unsafe { &mut self.dict.get_unchecked_mut(key as usize) };
+        // Constant folded by LLVM
+        if is_unchecked {
+            push_unchecked(&mut entry.items, offset);
+        } else {
+            entry.items.push(offset);
+        }
     }
 
     /// Returns a slice of offsets for the given key which are greater than or equal to `min_ofs`
@@ -144,6 +185,14 @@ impl CompDict {
     }
 }
 
+fn push_unchecked<T>(vec: &mut Vec<T>, value: T) {
+    unsafe {
+        let len = vec.len();
+        write(vec.as_mut_ptr().add(len), value);
+        vec.set_len(len + 1);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,8 +200,9 @@ mod tests {
     #[test]
     fn can_add_item() {
         // Add an item with key 0x4141 and ensure it exists.
-        let mut comp_dict = CompDict::new();
-        comp_dict.add_item(0, 0x4141);
+        let boxed_slice = vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
+        let mut comp_dict = CompDict::new(boxed_slice);
+        comp_dict.add_item(0, 0x4141, false);
 
         let entry = &comp_dict.dict[0x4141];
         assert_eq!(entry.items, vec![0]);
@@ -162,17 +212,18 @@ mod tests {
     fn can_get_item() {
         unsafe {
             // Add multiple offsets at the same key, and ensure they are returned.
-            let mut comp_dict = CompDict::new();
-            comp_dict.add_item(0, 0x4141);
-            comp_dict.add_item(1, 0x4141);
-            comp_dict.add_item(2, 0x4141);
-            comp_dict.add_item(3, 0x4141);
-            comp_dict.add_item(4, 0x4141);
-            comp_dict.add_item(5, 0x4141);
-            comp_dict.add_item(6, 0x4141);
-            comp_dict.add_item(7, 0x4141);
-            comp_dict.add_item(8, 0x4141);
-            comp_dict.add_item(9, 0x4141);
+            let boxed_slice = vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
+            let mut comp_dict = CompDict::new(boxed_slice);
+            comp_dict.add_item(0, 0x4141, false);
+            comp_dict.add_item(1, 0x4141, false);
+            comp_dict.add_item(2, 0x4141, false);
+            comp_dict.add_item(3, 0x4141, false);
+            comp_dict.add_item(4, 0x4141, false);
+            comp_dict.add_item(5, 0x4141, false);
+            comp_dict.add_item(6, 0x4141, false);
+            comp_dict.add_item(7, 0x4141, false);
+            comp_dict.add_item(8, 0x4141, false);
+            comp_dict.add_item(9, 0x4141, false);
 
             let result = comp_dict.get_item(0x4141, 1, 2);
             assert_eq!(&[1, 2], result);
