@@ -32,7 +32,7 @@ const DICTIONARY_PADDING: usize =
 /// When the compressor is looking for longest match at given address, it will read the 2 bytes at the
 /// address and use that as key [`CompDict::get_item`]. Then the offsets inside the returned entry
 /// will be used to greatly speed up search.
-pub(crate) struct CompDict {
+pub struct CompDict {
     /// Our memory allocation is here.
     /// Layout:
     /// - [CompDictEntry; MAX_U16] (dict), constant size

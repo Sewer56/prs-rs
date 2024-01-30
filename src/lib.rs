@@ -10,6 +10,7 @@ pub mod impls {
     pub mod comp {
         pub mod comp_dict;
         pub mod compress;
+        pub mod lz77_matcher;
     }
 
     pub mod decomp {

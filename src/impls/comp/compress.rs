@@ -1,4 +1,6 @@
-use core::cmp::min;
+use core::{cmp::min, slice};
+
+use crate::impls::comp::comp_dict::CompDict;
 
 /// Parameters
 ///
@@ -13,6 +15,8 @@ pub(crate) unsafe fn prs_compress(
     mut dest: *mut u8,
     source_len: usize,
 ) -> usize {
+    let mut dict = CompDict::new(slice::from_raw_parts(source, source_len));
+
     // Write first control byte.
     let mut control_byte = 0;
     let mut control_byte_ptr = reserve_control_byte(&mut dest);
@@ -20,7 +24,9 @@ pub(crate) unsafe fn prs_compress(
     let mut decompressed_size = 0;
 
     let end = source.add(source_len);
-    while source < end {}
+    while source < end {
+        let mut match_length = 0;
+    }
 
     todo!()
 }
