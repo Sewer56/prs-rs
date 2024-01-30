@@ -149,48 +149,42 @@ impl CompDict {
             let mut data_ofs = 0;
             let data_len = data.len();
 
-            while data_ofs <= data_len.saturating_sub(8) {
+            while data_ofs <= data_len.saturating_sub(16) {
                 let chunk = read_unaligned(data.as_ptr().add(data_ofs) as *const u64);
 
                 // Process every 16-bit sequence starting at each byte within the 64-bit chunk
                 for shift in 0..7 {
+                    // Successfully unrolled by LLVM
                     let key = ((chunk >> (shift * 8)) & 0xFFFF) as u16;
                     let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
-                    // Insert the offset into the dictionary
                     **insert_entry_ptr = (data_ptr_start.add(data_ofs + shift) as usize
-                        - data_ptr_start as usize)
-                        as MaxOffset; // set offset
-                    *insert_entry_ptr = (*insert_entry_ptr).add(1); // advance to next entry
-                }
-
-                // Handle the 16-bit number that spans the boundary between this chunk and the next
-                if data_ofs + 8 < data_len {
-                    let next_byte = (*(data.as_ptr().add(data_ofs + 8)) as u64) << 8;
-                    let key = ((chunk >> 56) | next_byte) as u16;
-                    let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
-
-                    **insert_entry_ptr = (data_ptr_start.add(data_ofs + 7) as usize
                         - data_ptr_start as usize)
                         as MaxOffset;
                     *insert_entry_ptr = (*insert_entry_ptr).add(1);
                 }
+
+                // Handle the 16-bit number that spans the boundary between this chunk and the next
+                // Note: LLVM puts next_chunk in register and reuses it for next loop iteration (under x64), nothing special to do here.
+                let next_chunk = read_unaligned(data.as_ptr().add(data_ofs + 8) as *const u64);
+                let key = ((chunk >> 56) | (next_chunk & 0xFF) << 8) as u16;
+                let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
+
+                **insert_entry_ptr = (data_ptr_start.add(data_ofs + 7) as usize
+                    - data_ptr_start as usize) as MaxOffset;
+                *insert_entry_ptr = (*insert_entry_ptr).add(1);
 
                 data_ofs += 8;
             }
 
             // Process any remaining bytes in the data.
             while data_ofs < data_len.saturating_sub(1) {
-                unsafe {
-                    let key = read_unaligned(data.as_ptr().add(data_ofs) as *const u16);
-                    let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
+                let key = read_unaligned(data.as_ptr().add(data_ofs) as *const u16);
+                let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
-                    // Insert the offset into the dictionary
-                    **insert_entry_ptr = (data_ptr_start.add(data_ofs) as usize
-                        - data_ptr_start as usize)
-                        as MaxOffset; // set offset
-                    *insert_entry_ptr = (*insert_entry_ptr).add(1); // advance to next entry
-                }
+                **insert_entry_ptr =
+                    (data_ptr_start.add(data_ofs) as usize - data_ptr_start as usize) as MaxOffset;
+                *insert_entry_ptr = (*insert_entry_ptr).add(1);
                 data_ofs += 2;
             }
         }
@@ -231,32 +225,28 @@ impl CompDict {
             let data_len = data.len();
             let mut data_ofs = 0;
 
-            while data_ofs <= data_len.saturating_sub(8) {
+            while data_ofs <= data_len.saturating_sub(16) {
                 let chunk = read_unaligned(data.as_ptr().add(data_ofs) as *const u64);
 
                 // Process every 16-bit sequence starting at each byte within the 64-bit chunk
                 for shift in 0..7 {
-                    // beautifully unrolled by compiler, can't do better myself.
                     let index = ((chunk >> (shift * 8)) & 0xFFFF) as u16;
                     result[index as usize] += 1;
                 }
 
                 // Handle the 16-bit number that spans the boundary between this chunk and the next
-                if data_ofs + 8 < data_len {
-                    let next_byte = (*(data.as_ptr().add(data_ofs + 8)) as u64) << 8;
-                    let key = ((chunk >> 56) | next_byte) as u16;
-                    result[key as usize] += 1;
-                }
+                // Note: LLVM puts next_chunk in register and reuses it for next loop iteration (under x64), nothing special to do here.
+                let next_chunk = read_unaligned(data.as_ptr().add(data_ofs + 8) as *const u64);
+                let key = ((chunk >> 56) | (next_chunk & 0xFF) << 8) as u16;
+                result[key as usize] += 1;
 
                 data_ofs += 8;
             }
 
             // Process any remaining bytes in the data.
             while data_ofs < data_len.saturating_sub(1) {
-                unsafe {
-                    let index = read_unaligned(data.as_ptr().add(data_ofs) as *const u16);
-                    result[index as usize] += 1;
-                }
+                let index = read_unaligned(data.as_ptr().add(data_ofs) as *const u16);
+                result[index as usize] += 1;
                 data_ofs += 2;
             }
 
