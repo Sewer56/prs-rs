@@ -124,20 +124,75 @@ impl CompDict {
         let mut dict_insert_entry_ptrs = dict_insert_entry_ptrs.assume_init();
 
         // Iterate over the data, and add each 2-byte sequence to the dictionary.
-        let data_ptr_start = data.as_ptr();
-        let mut data_ptr = data.as_ptr();
-        let data_ptr_max = data.as_ptr().add(data.len() - 1);
-        debug_assert!(data.len() as MaxOffset <= MaxOffset::MAX);
+        #[cfg(not(target_pointer_width = "64"))]
+        {
+            let data_ptr_start = data.as_ptr();
+            let mut data_ptr = data.as_ptr();
+            let data_ptr_max = data.as_ptr().add(data.len() - 1);
+            debug_assert!(data.len() as MaxOffset <= MaxOffset::MAX);
 
-        while data_ptr < data_ptr_max {
-            let key = read_unaligned(data_ptr as *const u16);
-            let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
+            while data_ptr < data_ptr_max {
+                let key = read_unaligned(data_ptr as *const u16);
+                let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
-            // Insert the offset into the dictionary
-            **insert_entry_ptr = data_ptr.sub(data_ptr_start as usize) as MaxOffset; // set offset
-            *insert_entry_ptr = (*insert_entry_ptr).add(1); // advance to next entry
+                // Insert the offset into the dictionary
+                **insert_entry_ptr = data_ptr.sub(data_ptr_start as usize) as MaxOffset; // set offset
+                *insert_entry_ptr = (*insert_entry_ptr).add(1); // advance to next entry
 
-            data_ptr = data_ptr.add(1);
+                data_ptr = data_ptr.add(1);
+            }
+        }
+
+        #[cfg(target_pointer_width = "64")]
+        {
+            let data_ptr_start = data.as_ptr();
+            let mut data_ofs = 0;
+            let data_len = data.len();
+
+            while data_ofs <= data_len.saturating_sub(8) {
+                let chunk = read_unaligned(data.as_ptr().add(data_ofs) as *const u64);
+
+                // Process every 16-bit sequence starting at each byte within the 64-bit chunk
+                for shift in 0..7 {
+                    let key = ((chunk >> (shift * 8)) & 0xFFFF) as u16;
+                    let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
+
+                    // Insert the offset into the dictionary
+                    **insert_entry_ptr = (data_ptr_start.add(data_ofs + shift) as usize
+                        - data_ptr_start as usize)
+                        as MaxOffset; // set offset
+                    *insert_entry_ptr = (*insert_entry_ptr).add(1); // advance to next entry
+                }
+
+                // Handle the 16-bit number that spans the boundary between this chunk and the next
+                if data_ofs + 8 < data_len {
+                    let next_byte = (*(data.as_ptr().add(data_ofs + 8)) as u64) << 8;
+                    let key = ((chunk >> 56) | next_byte) as u16;
+                    let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
+
+                    **insert_entry_ptr = (data_ptr_start.add(data_ofs + 7) as usize
+                        - data_ptr_start as usize)
+                        as MaxOffset;
+                    *insert_entry_ptr = (*insert_entry_ptr).add(1);
+                }
+
+                data_ofs += 8;
+            }
+
+            // Process any remaining bytes in the data.
+            while data_ofs < data_len.saturating_sub(1) {
+                unsafe {
+                    let key = read_unaligned(data.as_ptr().add(data_ofs) as *const u16);
+                    let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
+
+                    // Insert the offset into the dictionary
+                    **insert_entry_ptr = (data_ptr_start.add(data_ofs) as usize
+                        - data_ptr_start as usize)
+                        as MaxOffset; // set offset
+                    *insert_entry_ptr = (*insert_entry_ptr).add(1); // advance to next entry
+                }
+                data_ofs += 2;
+            }
         }
 
         CompDict {
@@ -150,12 +205,13 @@ impl CompDict {
     ///
     /// # Parameters
     /// - `data`: The data to create the frequency table from.
-    pub(crate) fn create_frequency_table(data: &[u8]) -> Box<[MaxOffset; MAX_U16]> {
-        unsafe {
-            // This actually has no overhead.
-            let mut result: Box<[MaxOffset; MAX_U16]> =
-                vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
+    pub(crate) unsafe fn create_frequency_table(data: &[u8]) -> Box<[MaxOffset; MAX_U16]> {
+        // This actually has no overhead.
+        let mut result: Box<[MaxOffset; MAX_U16]> =
+            vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
 
+        #[cfg(not(target_pointer_width = "64"))]
+        {
             // Iterate over the data, and add each 2-byte sequence to the dictionary.
             let data_ptr = data.as_ptr();
             let data_ofs_max = data.len() - 1;
@@ -165,6 +221,43 @@ impl CompDict {
                 let index = read_unaligned(data_ptr.add(data_ofs) as *const u16);
                 result[index as usize] += 1;
                 data_ofs += 1;
+            }
+
+            result
+        }
+
+        #[cfg(target_pointer_width = "64")]
+        {
+            let data_len = data.len();
+            let mut data_ofs = 0;
+
+            while data_ofs <= data_len.saturating_sub(8) {
+                let chunk = read_unaligned(data.as_ptr().add(data_ofs) as *const u64);
+
+                // Process every 16-bit sequence starting at each byte within the 64-bit chunk
+                for shift in 0..7 {
+                    // beautifully unrolled by compiler, can't do better myself.
+                    let index = ((chunk >> (shift * 8)) & 0xFFFF) as u16;
+                    result[index as usize] += 1;
+                }
+
+                // Handle the 16-bit number that spans the boundary between this chunk and the next
+                if data_ofs + 8 < data_len {
+                    let next_byte = (*(data.as_ptr().add(data_ofs + 8)) as u64) << 8;
+                    let key = ((chunk >> 56) | next_byte) as u16;
+                    result[key as usize] += 1;
+                }
+
+                data_ofs += 8;
+            }
+
+            // Process any remaining bytes in the data.
+            while data_ofs < data_len.saturating_sub(1) {
+                unsafe {
+                    let index = read_unaligned(data.as_ptr().add(data_ofs) as *const u16);
+                    result[index as usize] += 1;
+                }
+                data_ofs += 2;
             }
 
             result
@@ -210,6 +303,7 @@ impl CompDict {
         entry.last_read_item = cur_last_read_item;
 
         // Find the end of the range - the first offset greater than max_ofs
+        // TODO: Try last read max item.
         let mut end = entry.last_read_item;
         while end < entry.last_item && *end <= max_ofs as MaxOffset {
             end = end.add(1);
@@ -247,7 +341,7 @@ mod tests {
     #[test]
     fn can_create_dict() {
         unsafe {
-            let data = &[0x41, 0x42, 0x43, 0x41, 0x41, 0x41, 0x41, 0x41];
+            let data = &[0x41, 0x42, 0x43, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41];
             let mut comp_dict = CompDict::new(data);
 
             // Assert that the items were correctly inserted.
@@ -260,6 +354,10 @@ mod tests {
                 &[1]
             );
 
+            // Ensure doesn't break on 64-bit boundaries on 64-bit arch.
+            let result = comp_dict.get_item(0x4141, 3, 99);
+            assert_eq!(&[3, 4, 5, 6, 7], result);
+
             // Ensure we can get a slice.
             let result = comp_dict.get_item(0x4141, 3, 4);
             assert_eq!(&[3, 4], result);
@@ -271,7 +369,7 @@ mod tests {
 
             // Access beyond end of sequence
             let result = comp_dict.get_item(0x4141, 5, 7);
-            assert_eq!(&[5, 6], result);
+            assert_eq!(&[5, 6, 7], result);
         }
     }
 }
