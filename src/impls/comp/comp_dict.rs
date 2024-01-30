@@ -26,8 +26,8 @@ const DICTIONARY_PADDING: usize =
 ///
 /// This dictionary stores the locations of every single possible place that a specified 2-byte sequence
 /// can be found, with the 2 byte combination being the dictionary 'key'. The values (locations) are
-/// stored inside a shared buffer, where [`CompDictEntry`] dictates the first item offset. The items
-/// are stored in ascending order.
+/// stored inside a shared buffer, where [`CompDictEntry`] dictates the file offsets of the locations
+/// which start with this 2 byte combination. The items are stored in ascending order.
 ///
 /// When the compressor is looking for longest match at given address, it will read the 2 bytes at the
 /// address and use that as key [`CompDict::get_item`]. Then the offsets inside the returned entry
@@ -36,7 +36,7 @@ pub(crate) struct CompDict {
     /// Our memory allocation is here.
     /// Layout:
     /// - [CompDictEntry; MAX_U16] (dict), constant size
-    /// - [MaxOffset; data_length] (offsets), variable size
+    /// - [MaxOffset; file_num_bytes] (offsets), variable size. This buffer stores offsets of all items of 2 byte combinations.
     buf: NonNull<MaxOffset>,
     alloc_length: usize, // length of data that 'dict' and 'offsets' were made with
 }
