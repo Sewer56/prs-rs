@@ -2,7 +2,7 @@ extern crate alloc;
 use alloc::alloc::{alloc, dealloc};
 use alloc::boxed::Box;
 use alloc::vec;
-use core::ptr::{write, NonNull};
+use core::ptr::{read, write, NonNull};
 use core::slice;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
 
@@ -145,12 +145,12 @@ impl CompDict {
 
         #[cfg(target_pointer_width = "64")]
         {
-            let data_ptr_start = data.as_ptr();
             let mut data_ofs = 0;
             let data_len = data.len();
 
             while data_ofs <= data_len.saturating_sub(16) {
-                let chunk = read_unaligned(data.as_ptr().add(data_ofs) as *const u64);
+                // Doing a lot of the `data.as_ptr().add()` is ugly, but it makes LLVM do a better job.
+                let chunk = read(data.as_ptr().add(data_ofs) as *const u64);
 
                 // Process every 16-bit sequence starting at each byte within the 64-bit chunk
                 for shift in 0..7 {
@@ -158,20 +158,21 @@ impl CompDict {
                     let key = ((chunk >> (shift * 8)) & 0xFFFF) as u16;
                     let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
-                    **insert_entry_ptr = (data_ptr_start.add(data_ofs + shift) as usize
-                        - data_ptr_start as usize)
+                    **insert_entry_ptr = (data.as_ptr().add(data_ofs + shift) as usize
+                        - data.as_ptr() as usize)
                         as MaxOffset;
                     *insert_entry_ptr = (*insert_entry_ptr).add(1);
                 }
 
                 // Handle the 16-bit number that spans the boundary between this chunk and the next
                 // Note: LLVM puts next_chunk in register and reuses it for next loop iteration (under x64), nothing special to do here.
-                let next_chunk = read_unaligned(data.as_ptr().add(data_ofs + 8) as *const u64);
-                let key = ((chunk >> 56) | (next_chunk & 0xFF) << 8) as u16;
+                let next_chunk = read(data.as_ptr().add(data_ofs + 8) as *const u64);
+                let next_chunk_byte = (next_chunk & 0xFF) << 8;
+                let key = ((chunk >> 56) | next_chunk_byte) as u16;
                 let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
-                **insert_entry_ptr = (data_ptr_start.add(data_ofs + 7) as usize
-                    - data_ptr_start as usize) as MaxOffset;
+                **insert_entry_ptr = (data.as_ptr().add(data_ofs + 7) as usize
+                    - data.as_ptr() as usize) as MaxOffset;
                 *insert_entry_ptr = (*insert_entry_ptr).add(1);
 
                 data_ofs += 8;
@@ -183,9 +184,9 @@ impl CompDict {
                 let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
                 **insert_entry_ptr =
-                    (data_ptr_start.add(data_ofs) as usize - data_ptr_start as usize) as MaxOffset;
+                    (data.as_ptr().add(data_ofs) as usize - data.as_ptr() as usize) as MaxOffset;
                 *insert_entry_ptr = (*insert_entry_ptr).add(1);
-                data_ofs += 2;
+                data_ofs += 1;
             }
         }
 
@@ -237,7 +238,7 @@ impl CompDict {
                 // Handle the 16-bit number that spans the boundary between this chunk and the next
                 // Note: LLVM puts next_chunk in register and reuses it for next loop iteration (under x64), nothing special to do here.
                 let next_chunk = read_unaligned(data.as_ptr().add(data_ofs + 8) as *const u64);
-                let key = ((chunk >> 56) | (next_chunk & 0xFF) << 8) as u16;
+                let key = ((chunk >> 56) | ((next_chunk & 0xFF) << 8)) as u16;
                 result[key as usize] += 1;
 
                 data_ofs += 8;
@@ -247,7 +248,7 @@ impl CompDict {
             while data_ofs < data_len.saturating_sub(1) {
                 let index = read_unaligned(data.as_ptr().add(data_ofs) as *const u16);
                 result[index as usize] += 1;
-                data_ofs += 2;
+                data_ofs += 1;
             }
 
             result
