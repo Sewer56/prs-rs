@@ -69,6 +69,8 @@ impl Drop for CompDict {
 pub struct CompDictEntry {
     /// Address of the last minimum offset from previous call to [`CompDict::get_item`].
     last_read_item: *mut MaxOffset,
+    /// Address of the last maximum offset from previous call to [`CompDict::get_item`].
+    last_read_item_max: *mut MaxOffset,
     /// Item after last item within the [`CompDict::offsets`] allocation belonging to this entry.
     last_item: *mut MaxOffset,
 }
@@ -111,6 +113,7 @@ impl CompDict {
                 cur_dict_entry,
                 CompDictEntry {
                     last_read_item: cur_ofs_addr,
+                    last_read_item_max: cur_ofs_addr,
                     last_item: cur_ofs_addr.add(num_items as usize),
                 },
             );
@@ -295,10 +298,11 @@ impl CompDict {
 
         // Find the end of the range - the first offset greater than max_ofs
         // TODO: Try last read max item.
-        let mut end = entry.last_read_item;
+        let mut end = entry.last_read_item_max;
         while end < entry.last_item && *end <= max_ofs as MaxOffset {
             end = end.add(1);
         }
+        entry.last_read_item_max = end;
 
         // Create a slice from the updated range
         slice::from_raw_parts(
@@ -345,10 +349,6 @@ mod tests {
                 &[1]
             );
 
-            // Ensure doesn't break on 64-bit boundaries on 64-bit arch.
-            let result = comp_dict.get_item(0x4141, 3, 99);
-            assert_eq!(&[3, 4, 5, 6, 7], result);
-
             // Ensure we can get a slice.
             let result = comp_dict.get_item(0x4141, 3, 4);
             assert_eq!(&[3, 4], result);
@@ -359,7 +359,7 @@ mod tests {
             assert_eq!(*comp_dict.get_dict_mut()[0x4141].last_read_item, 4);
 
             // Access beyond end of sequence
-            let result = comp_dict.get_item(0x4141, 5, 7);
+            let result = comp_dict.get_item(0x4141, 5, 99);
             assert_eq!(&[5, 6, 7], result);
         }
     }

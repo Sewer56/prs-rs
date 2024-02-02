@@ -5,7 +5,7 @@ use prs_rs::util::prs_calculate_max_compressed_size;
 use crate::util::{get_uncompressed_file_path, load_sample_file};
 
 pub fn bench_compress_file(c: &mut Criterion) {
-    let file_names = vec!["Model.bin" /* , "ObjectLayout.bin", "WorstCase.bin"*/];
+    let file_names = vec!["Model.bin", "ObjectLayout.bin", "WorstCase.bin"];
     let mut group = c.benchmark_group("File Compression");
 
     for file_name in file_names {
