@@ -8,7 +8,7 @@ use super::comp_dict::CompDict;
 /// # Parameters
 ///
 /// - `dict`: The dictionary used to speed up computation.
-/// - `source`: The data where the match is to be searched.
+/// - `source_ptr`: The data where the match is to be searched.
 /// - `source_len`: The length of the data.
 /// - `source_index`: The index of the current byte in the source.
 /// - `max_offset`: The maximum offset to search backwards. (constant, optimized away by LLVM)
@@ -42,8 +42,9 @@ pub unsafe fn lz77_get_longest_match(
     let key = read_unaligned(source_ptr.add(source_index) as *const u16);
 
     // Retrieve possible match offsets from the dictionary
-    let offsets = dict.get_item(key, min_offset, source_index - 1);
-    for &match_offset in offsets {
+    let offsets = dict.get_item(key, min_offset, source_index.saturating_sub(1));
+    for &match_offset in offsets.iter().rev() {
+        // I swear Rust is magical, reverse iteration has no overhead here (checked ASM)
         let match_offset = match_offset as usize;
 
         // Determine the length of the match
@@ -123,7 +124,7 @@ mod tests {
             lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), data.len() - 2, 15, 15)
         };
         assert_eq!(match_result.length, 2);
-        assert_eq!(match_result.offset, -8);
+        assert_eq!(match_result.offset, -2);
 
         // Testing boundary condition: no match beyond data length
         let match_result = unsafe {

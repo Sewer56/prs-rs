@@ -5,7 +5,7 @@ use helpers::samples::get_uncompressed_file_path;
 use helpers::samples::load_sample_file;
 use more_asserts::assert_le;
 use prs_rs::decomp::prs_calculate_decompressed_size;
-use prs_rs::util::prs_calculate_max_decompressed_size;
+use prs_rs::util::prs_calculate_max_compressed_size;
 use rstest::rstest;
 
 #[rstest]
@@ -29,6 +29,6 @@ fn prs_calculate_max_decompressed_size_is_sufficient(#[case] file_name: &str) {
     let uncompressed = load_sample_file(get_uncompressed_file_path(file_name));
     assert_le!(
         compressed.len(),
-        prs_calculate_max_decompressed_size(uncompressed.len())
+        prs_calculate_max_compressed_size(uncompressed.len())
     );
 }

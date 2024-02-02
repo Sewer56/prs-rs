@@ -66,7 +66,7 @@ impl Drop for CompDict {
 /// When compressing, this means we can find next matching offset in LZ77 search window
 /// in (effectively) O(1) time.
 #[derive(Clone)]
-pub(crate) struct CompDictEntry {
+pub struct CompDictEntry {
     /// Address of the last minimum offset from previous call to [`CompDict::get_item`].
     last_read_item: *mut MaxOffset,
     /// Item after last item within the [`CompDict::offsets`] allocation belonging to this entry.
