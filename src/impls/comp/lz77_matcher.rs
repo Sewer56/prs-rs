@@ -1,6 +1,7 @@
-use core::ptr::read_unaligned;
-
 use super::comp_dict::CompDict;
+use core::mem::size_of;
+use core::ops::Sub;
+use core::ptr::read_unaligned;
 
 /// Searches back up to 'max_length' bytes and returns the length of the longest matching
 /// sequence of bytes.
@@ -49,22 +50,59 @@ pub unsafe fn lz77_get_longest_match(
 
         // Determine the length of the match
         let mut match_length = 2;
-        while match_length < max_length
-            && source_index + match_length < source_len
-            && *source_ptr.add(match_offset + match_length)
-                == *source_ptr.add(source_index + match_length)
-        {
-            match_length += 1;
+        let offset_src_ptr = source_ptr.add(match_offset);
+        let offset_dst_ptr = source_ptr.add(source_index);
+
+        // Perf: speed up the check loop if we can guarantee max_length won't overflow file.
+        if source_index + max_length < source_len {
+            get_matching_length_usize(
+                &mut match_length,
+                max_length,
+                offset_src_ptr,
+                offset_dst_ptr,
+            );
+
+            while match_length < max_length
+                && *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)
+            {
+                match_length += 1;
+            }
+        } else {
+            while match_length < max_length
+                && source_index + match_length < source_len
+                && *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)
+            {
+                match_length += 1;
+            }
         }
 
         // Update the best match if this match is longer
         if match_length > best_match.length {
             best_match.length = match_length;
             best_match.offset = match_offset as isize - source_index as isize;
+
+            if match_length == max_length {
+                break;
+            }
         }
     }
 
     best_match
+}
+
+#[inline]
+unsafe fn get_matching_length_usize(
+    match_length: &mut usize,
+    max_length: usize,
+    offset_src_ptr: *const u8,
+    offset_dst_ptr: *const u8,
+) {
+    while *match_length < max_length.saturating_sub(size_of::<usize>())
+        && read_unaligned(offset_src_ptr.add(*match_length) as *const usize)
+            == read_unaligned(offset_dst_ptr.add(*match_length) as *const usize)
+    {
+        *match_length += size_of::<usize>();
+    }
 }
 
 /// Represents a match in the LZ77 algorithm.
