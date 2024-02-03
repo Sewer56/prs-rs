@@ -1,6 +1,5 @@
 use super::comp_dict::CompDict;
 use core::mem::size_of;
-use core::ops::Sub;
 use core::ptr::read_unaligned;
 
 /// Searches back up to 'max_length' bytes and returns the length of the longest matching

@@ -1,6 +1,6 @@
 use crate::{
     impls::comp::{comp_dict::CompDict, compress::prs_compress},
-    MutablePointerSrc, ReadOnlyPointerSrc,
+    MutablePointerSrc,
 };
 
 /// BENCHMARK ONLY, DO NOT USE

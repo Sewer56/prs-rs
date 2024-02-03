@@ -16,7 +16,7 @@ pub fn bench_create_dict(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("create_dict", file_name),
             &data,
-            |b, data| b.iter(|| unsafe { black_box(create_comp_dict(data)) }),
+            |b, data| b.iter(|| black_box(create_comp_dict(data))),
         );
     }
 

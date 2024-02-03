@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 mod compress;
 mod createcompdict;
 mod decompress;
@@ -14,9 +16,9 @@ use estimate::bench_estimate;
 use pprof::criterion::{Output, PProfProfiler};
 
 fn criterion_benchmark(c: &mut Criterion) {
-    //bench_estimate(c);
-    //bench_decompress(c);
-    //bench_create_dict(c);
+    bench_estimate(c);
+    bench_decompress(c);
+    //bench_create_dict(c); // Disabled so we avoid this in PGO.
     bench_compress_file(c);
 }
 
