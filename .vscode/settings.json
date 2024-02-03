@@ -5,5 +5,9 @@
     },
     "coverage-gutters.coverageFileNames": [
         "cobertura.xml"
-    ]
+    ],
+    "rust-analyzer.linkedProjects": [
+        "./Cargo.toml"
+    ],
+    "rust-analyzer.cargo.features": "all"
 }

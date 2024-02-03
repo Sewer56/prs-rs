@@ -1,10 +1,12 @@
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![feature(new_uninit)]
 
 pub mod comp;
 pub mod decomp;
-pub mod exports;
 pub mod util;
+
+#[cfg(feature = "c-exports")]
+pub mod exports;
 
 pub mod impls {
     pub mod comp {
