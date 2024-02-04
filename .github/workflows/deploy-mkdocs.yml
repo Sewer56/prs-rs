@@ -16,5 +16,4 @@ jobs:
       - name: Deploy MkDocs
         uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/deploy-mkdocs-documentation@v1
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REQUIREMENTS: ./docs/requirements.txt

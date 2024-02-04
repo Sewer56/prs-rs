@@ -293,7 +293,7 @@ Licensed under [GPL v3 (with Reloaded FAQ)](./LICENSE).
 [codelldb]: https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb
 [coverage-gutters]: https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters 
 [crates-io-key]: https://crates.io/settings/tokens
-[docs]: https://prs-rs.github.io/prs-rs
+[docs]: https://sewer56.dev/prs-rs/
 [mkdocs-material]: https://squidfunk.github.io/mkdocs-material/
 [reloaded-license]: https://reloaded-project.github.io/Reloaded.MkDocsMaterial.Themes.R2/Pages/license/
 [rust-analyzer]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer
