@@ -223,6 +223,20 @@ The `docs` folder, and `mkdocs.yml` contain [MkDocs Material documentation][mkdo
 The `src` folder should contains all source code for your project.  
 
 `Cargo.toml` should be in the root of the project.  
+
+## C# Bindings for prs_rs
+
+This Reloaded-based project provides C# bindings, as [prs_rs.Net.Sys](https://www.nuget.org/packages/prs_rs.Net.Syss).
+
+These are the raw bindings to the C exports of this Rust library, and are automatically generated.
+
+The project is inside `bindings/csharp` folder. 
+It shouldn't be modified. 
+
+Instead, if you want to make a 'friendlier' API, make a separate project with 
+[prs_rs.Net.Sys](https://www.nuget.org/packages/prs_rs.Net.Sys) as a dependency,
+and provide high level bindings.
+
 ## Cross Platform Targeting
 
 Some templates allow for cross platform development.  
