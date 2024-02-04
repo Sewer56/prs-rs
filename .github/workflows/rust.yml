@@ -74,7 +74,7 @@ jobs:
           submodules: recursive
 
       - id: build-libs
-        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/build-c-library@pgo # upgrade if needed
+        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/build-c-library@v1 # upgrade if needed
         with:
           target: ${{ matrix.target }}
           use_pgo: ${{ matrix.use_pgo }}
