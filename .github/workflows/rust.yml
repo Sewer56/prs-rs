@@ -2,11 +2,11 @@ name: Test, Upload Coverage and Release Rust
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, pgo ]
     tags:
       - '*'
   pull_request:
-    branches: [ main ]
+    branches: [ main, pgo ]
   workflow_dispatch:
 
 jobs:
@@ -20,12 +20,14 @@ jobs:
           - windows-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - id: test-rust
         uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/test-and-coverage@v1 # upgrade if needed
+        with:
+          rust_branch: 'nightly'
 
   build-c-libs:
     strategy:
@@ -33,33 +35,51 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            use_pgo: true
+            use_cross: false
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
+            use_pgo: true
+            use_cross: false
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            use_pgo: false # no native runner
+            use_cross: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            use_pgo: true
+            use_cross: false
           - os: windows-latest
             target: i686-pc-windows-msvc
-          - os: windows-latest
+            use_pgo: true
+            use_cross: false
+          - os: windows-latest 
             target: aarch64-pc-windows-msvc
-          - os: macos-latest
+            use_pgo: false # no native runner
+            use_cross: false
+          - os: macos-13 # x86
             target: x86_64-apple-darwin
-          - os: macos-latest
+            use_pgo: true
+            use_cross: false
+          - os: macos-14 # M1
             target: aarch64-apple-darwin
+            use_pgo: true
+            use_cross: false
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - id: build-libs
-        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/build-c-library@v1 # upgrade if needed
+        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/build-c-library@pgo # upgrade if needed
         with:
-          rust_project_path: src-rust
           target: ${{ matrix.target }}
+          use_pgo: ${{ matrix.use_pgo }}
+          use_cross: ${{ matrix.use_cross }}
+          features: "c-exports"
 
   publish-crate:
     needs: [test-native,build-c-libs ]
@@ -67,12 +87,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/') 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - name: ↙️ Download Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
