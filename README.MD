@@ -146,6 +146,67 @@ RUSTFLAGS="-C panic=abort -C lto=fat -C embed-bitcode=yes" cargo +nightly bloat 
 Change `--target` if needed for your platform.  
 This should produce binaries more appropriate for dynamic linking from C.  
 
+## PGO (Profile Guided Optimization) on C Libraries
+
+This Reloaded-based library is built with [Profile Guided Optimization (PGO)](https://doc.rust-lang.org/rustc/profile-guided-optimization.html).
+
+PGO is a compiler optimization technique that uses data from profiling runs to improve the quality of the generated code.
+
+Details of the PGO implementation in this project are as follows:
+
+- We collect PGO data by running the `benchmarks` with the `pgo` feature enabled.
+- This is done in CI, before building the final C library.
+
+You should ensure that only realistic representative workloads are used to collect the PGO data.
+
+For example, if this was a compression library, you should run the 'compress' and 'decompress' methods
+on real files (not random data) as part of your benchmarks. 
+
+Non-realistic/representative workloads in benchmarks should be excluded through the 'pgo' feature flag,
+for example an unrealistic benchmark can be excluded like this:
+
+```rust
+#[cfg(not(feature = "pgo"))]
+{
+    bench_create_dict(c);
+}
+```
+
+### Testing PGO
+
+PGO isn't guaranteed to always provide an improvement, after adding representative workloads, always test.
+
+We will test with `cargo pgo`.
+
+First, install the following:
+
+```
+cargo install cargo-pgo
+rustup toolchain install nightly
+rustup component add llvm-tools-preview
+```
+
+Then run an 'instrumented' benchmark, this will run your code in `pgo_benchmark` and collect some data:
+
+```
+cargo +nightly pgo instrument bench
+```
+
+After that run a regular benchmark to create a 'baseline' number:
+
+```
+cargo +nightly bench
+```
+
+And run the PGO optimized build:
+
+```
+cargo +nightly pgo optimize bench
+```
+
+If most of the results are equal or show an improvement, PGO has helped.
+Otherwise disable PGO from the library by editing the [rust.yml](./.github/workflows/rust.yml) workflow.
+
 ## File Layout
 
 The following is the expected file layout for your project:

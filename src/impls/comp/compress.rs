@@ -1,6 +1,6 @@
 use super::lz77_matcher::Lz77Match;
 use crate::impls::comp::{comp_dict::CompDict, lz77_matcher::lz77_get_longest_match};
-use core::slice;
+use core::{ptr::write_unaligned, slice};
 
 const SHORT_COPY_MAX_LENGTH: isize = 0x100;
 const SHORT_COPY_MAX_OFFSET: usize = 5;
@@ -232,6 +232,6 @@ unsafe fn append_byte(value: u8, dest: &mut *mut u8) {
 /// Appends two bytes to the destination, little endian
 #[inline]
 unsafe fn append_u16_le(value: u16, dest: &mut *mut u8) {
-    *((*dest) as *mut u16) = value.to_le();
+    write_unaligned((*dest) as *mut u16, value.to_le());
     *dest = dest.add(2);
 }
