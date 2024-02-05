@@ -2,6 +2,7 @@ use super::lz77_matcher::Lz77Match;
 use crate::impls::comp::{comp_dict::CompDict, lz77_matcher::lz77_get_longest_match};
 use core::{ptr::write_unaligned, slice};
 
+const MAX_OFFSET: usize = 0x1FFF;
 const SHORT_COPY_MAX_LENGTH: isize = 0x100;
 const SHORT_COPY_MAX_OFFSET: usize = 5;
 const SHORT_COPY_MIN_OFFSET: usize = 2;
@@ -41,54 +42,50 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
         source_ofs += 1;
     }
 
-    // Loop through remaining bytes.
-    while source_ofs < source_len {
+    // Loop through all the bytes, as long as there are less than SHORT_COPY_MAX_LENGTH bytes left.
+    // We elimiate a branch inside lz77_get_longest_match by doing this, saving a bit of perf.
+    while source_ofs < source_len.saturating_sub(SHORT_COPY_MAX_LENGTH as usize) {
         // Get longest match.
-        let result =
-            lz77_get_longest_match(&mut dict, source, source_len, source_ofs, 0x1FFF, 0x100);
+        let result = lz77_get_longest_match(
+            &mut dict,
+            source,
+            source_len,
+            source_ofs,
+            MAX_OFFSET,
+            SHORT_COPY_MAX_LENGTH as usize,
+            true,
+        );
 
-        // Check for short copy.
-        if result.offset >= -SHORT_COPY_MAX_LENGTH
-            && result.length >= SHORT_COPY_MIN_OFFSET
-            && result.length <= SHORT_COPY_MAX_OFFSET
-        {
-            write_short_copy(
-                &mut dest,
-                &result,
-                &mut control_bit_position,
-                &mut control_byte_ptr,
-            );
-            source_ofs += result.length;
-        } else if result.length <= 2 {
-            // Otherwise write a direct byte if we can't compress.
-            append_control_bit(
-                1,
-                &mut dest,
-                &mut control_bit_position,
-                &mut control_byte_ptr,
-            );
-            append_byte(*source.add(source_ofs), &mut dest);
-            source_ofs += 1;
-        } else {
-            // Otherwise encode a long copy
-            if result.length <= 9 {
-                write_long_copy_small(
-                    &mut dest,
-                    &result,
-                    &mut control_bit_position,
-                    &mut control_byte_ptr,
-                );
-                source_ofs += result.length;
-            } else {
-                write_long_copy_large(
-                    &mut dest,
-                    &result,
-                    &mut control_bit_position,
-                    &mut control_byte_ptr,
-                );
-                source_ofs += result.length;
-            }
-        }
+        encode_lz77_match(
+            result,
+            &mut dest,
+            &mut control_bit_position,
+            &mut control_byte_ptr,
+            &mut source_ofs,
+            source,
+        );
+    }
+
+    // Handle the remaining bytes.
+    while source_ofs < source_len {
+        let result = lz77_get_longest_match(
+            &mut dict,
+            source,
+            source_len,
+            source_ofs,
+            MAX_OFFSET,
+            SHORT_COPY_MAX_LENGTH as usize,
+            false, // 👈 loop differs here
+        );
+
+        encode_lz77_match(
+            result,
+            &mut dest,
+            &mut control_bit_position,
+            &mut control_byte_ptr,
+            &mut source_ofs,
+            source,
+        );
     }
 
     // Finish the PRS file
@@ -109,6 +106,39 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     append_byte(0x00, &mut dest);
 
     dest as usize - orig_dest
+}
+
+#[inline(always)]
+unsafe fn encode_lz77_match(
+    result: Lz77Match,
+    dest: &mut *mut u8,
+    control_bit_position: &mut usize,
+    control_byte_ptr: &mut *mut u8,
+    source_ofs: &mut usize,
+    source: *const u8,
+) {
+    // Check for short copy.
+    if result.offset >= -SHORT_COPY_MAX_LENGTH
+        && result.length >= SHORT_COPY_MIN_OFFSET
+        && result.length <= SHORT_COPY_MAX_OFFSET
+    {
+        write_short_copy(dest, &result, control_bit_position, control_byte_ptr);
+        *source_ofs += result.length;
+    } else if result.length <= 2 {
+        // Otherwise write a direct byte if we can't compress.
+        append_control_bit(1, dest, control_bit_position, control_byte_ptr);
+        append_byte(*source.add(*source_ofs), dest);
+        *source_ofs += 1;
+    } else {
+        // Otherwise encode a long copy
+        if result.length <= 9 {
+            write_long_copy_small(dest, &result, control_bit_position, control_byte_ptr);
+            *source_ofs += result.length;
+        } else {
+            write_long_copy_large(dest, &result, control_bit_position, control_byte_ptr);
+            *source_ofs += result.length;
+        }
+    }
 }
 
 /// Writes a short copy (00 opcode), size 2-5, offset 1-256

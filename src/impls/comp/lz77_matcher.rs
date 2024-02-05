@@ -13,11 +13,12 @@ use core::ptr::read_unaligned;
 /// - `source_index`: The index of the current byte in the source.
 /// - `max_offset`: The maximum offset to search backwards. (constant, optimized away by LLVM)
 /// - `max_length`: The maximum length to search backwards. (constant, optimized away by LLVM)
+/// - `more_than_max_length_bytes_left`: True if `source_index + max_length < source_len` (constant, optimized away by LLVM)
 ///
 /// # Safety
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
-#[inline]
+#[inline(always)]
 pub unsafe fn lz77_get_longest_match(
     dict: &mut CompDict,
     source_ptr: *const u8,
@@ -25,6 +26,7 @@ pub unsafe fn lz77_get_longest_match(
     source_index: usize,
     max_offset: usize,
     max_length: usize,
+    more_than_max_length_bytes_left: bool,
 ) -> Lz77Match {
     let mut best_match = Lz77Match {
         offset: 0,
@@ -53,7 +55,8 @@ pub unsafe fn lz77_get_longest_match(
         let offset_dst_ptr = source_ptr.add(source_index);
 
         // Perf: speed up the check loop if we can guarantee max_length won't overflow file.
-        if source_index + max_length < source_len {
+        // LLVM optimizes away this constant.
+        if more_than_max_length_bytes_left {
             get_matching_length_usize(
                 &mut match_length,
                 max_length,
@@ -122,8 +125,9 @@ mod tests {
         let mut dict = unsafe { CompDict::new(data) };
 
         // Longest match for "abc" starting from index 3 should be of length 12
-        let match_result =
-            unsafe { lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), 3, 15, 15) };
+        let match_result = unsafe {
+            lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), 3, 15, 15, false)
+        };
         assert_eq!(match_result.length, 12);
         assert_eq!(match_result.offset, -3);
     }
@@ -134,8 +138,9 @@ mod tests {
         let mut dict = unsafe { CompDict::new(data) };
 
         // No repetition, so no match
-        let match_result =
-            unsafe { lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), 2, 15, 15) };
+        let match_result = unsafe {
+            lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), 2, 15, 15, false)
+        };
         assert_eq!(match_result.length, 0);
     }
 
@@ -145,8 +150,9 @@ mod tests {
         let mut dict = unsafe { CompDict::new(data) };
 
         // Multiple "ab" patterns, longest match from index 2 should be length 8
-        let match_result =
-            unsafe { lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), 2, 15, 15) };
+        let match_result = unsafe {
+            lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), 2, 15, 15, false)
+        };
         assert_eq!(match_result.length, 8);
         assert_eq!(match_result.offset, -2);
     }
@@ -158,14 +164,30 @@ mod tests {
 
         // Testing boundary condition: match at the very end
         let match_result = unsafe {
-            lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), data.len() - 2, 15, 15)
+            lz77_get_longest_match(
+                &mut dict,
+                data.as_ptr(),
+                data.len(),
+                data.len() - 2,
+                15,
+                15,
+                false,
+            )
         };
         assert_eq!(match_result.length, 2);
         assert_eq!(match_result.offset, -2);
 
         // Testing boundary condition: no match beyond data length
         let match_result = unsafe {
-            lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), data.len(), 15, 15)
+            lz77_get_longest_match(
+                &mut dict,
+                data.as_ptr(),
+                data.len(),
+                data.len(),
+                15,
+                15,
+                false,
+            )
         };
         assert_eq!(match_result.length, 0);
     }
@@ -177,7 +199,15 @@ mod tests {
 
         // Testing boundary condition: match at the very end, when very end is only pattern
         let match_result = unsafe {
-            lz77_get_longest_match(&mut dict, data.as_ptr(), data.len(), data.len() - 2, 15, 15)
+            lz77_get_longest_match(
+                &mut dict,
+                data.as_ptr(),
+                data.len(),
+                data.len() - 2,
+                15,
+                15,
+                false,
+            )
         };
         assert_eq!(match_result.length, 2);
         assert_eq!(match_result.offset, -2);
