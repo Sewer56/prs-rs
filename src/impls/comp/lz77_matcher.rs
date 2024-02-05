@@ -34,11 +34,7 @@ pub unsafe fn lz77_get_longest_match(
     };
 
     // Calculate the minimum offset to consider for a match
-    let min_offset = if source_index > max_offset {
-        source_index - max_offset
-    } else {
-        0
-    };
+    let min_offset = source_index.saturating_sub(max_offset);
 
     // Read the 2-byte sequence from source at the current index
     let key = read_unaligned(source_ptr.add(source_index) as *const u16);
@@ -50,26 +46,67 @@ pub unsafe fn lz77_get_longest_match(
         let match_offset = match_offset as usize;
 
         // Determine the length of the match
-        let mut match_length = 2;
-        let offset_src_ptr = source_ptr.add(match_offset);
-        let offset_dst_ptr = source_ptr.add(source_index);
+        let mut match_length = 0;
 
         // Perf: speed up the check loop if we can guarantee max_length won't overflow file.
         // LLVM optimizes away this constant.
         if more_than_max_length_bytes_left {
-            get_matching_length_usize(
-                &mut match_length,
-                max_length,
-                offset_src_ptr,
-                offset_dst_ptr,
-            );
+            // Check the next 6 bytes.
+            // We reset to offset 0 because max_length divides into it, allowing
+            // for faster matching with completely repeated sequences
+            debug_assert!(max_length % size_of::<usize>() == 0);
+            let offset_src_ptr = source_ptr.add(match_offset);
+            let offset_dst_ptr = source_ptr.add(source_index);
+            let initial_match = read_unaligned(offset_src_ptr.add(match_length) as *const usize)
+                == read_unaligned(offset_dst_ptr.add(match_length) as *const usize);
 
-            while match_length < max_length
-                && *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)
-            {
-                match_length += 1;
+            if !initial_match {
+                match_length = 2;
+
+                // Length is < 8 bytes. So we don't need to compare max_length.
+                // Note: This code is normally inefficient but LLVM optimizes it down to bitshifts
+                // nicely. Normally I'd do this by hand but letting LLVM do it means we get decent
+                // codegen for 32-bit too.
+                if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
+                    match_length += 1;
+                    if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
+                        match_length += 1;
+                        if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
+                            match_length += 1;
+                            if *offset_src_ptr.add(match_length)
+                                == *offset_dst_ptr.add(match_length)
+                            {
+                                match_length += 1;
+                                if *offset_src_ptr.add(match_length)
+                                    == *offset_dst_ptr.add(match_length)
+                                {
+                                    match_length += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // First 8 bytes match.
+                while match_length < max_length
+                    && read_unaligned(offset_src_ptr.add(match_length) as *const usize)
+                        == read_unaligned(offset_dst_ptr.add(match_length) as *const usize)
+                {
+                    match_length += size_of::<usize>();
+                }
+
+                // Cleverly unrolled by LLVM as 4 single byte checks.
+                while match_length < max_length
+                    && *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)
+                {
+                    match_length += 1;
+                }
             }
         } else {
+            // We start having matched 2 and match byte by byte
+            match_length = 2;
+            let offset_src_ptr = source_ptr.add(match_offset);
+            let offset_dst_ptr = source_ptr.add(source_index);
             while match_length < max_length
                 && source_index + match_length < source_len
                 && *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)
@@ -90,21 +127,6 @@ pub unsafe fn lz77_get_longest_match(
     }
 
     best_match
-}
-
-#[inline]
-unsafe fn get_matching_length_usize(
-    match_length: &mut usize,
-    max_length: usize,
-    offset_src_ptr: *const u8,
-    offset_dst_ptr: *const u8,
-) {
-    while *match_length < max_length.saturating_sub(size_of::<usize>())
-        && read_unaligned(offset_src_ptr.add(*match_length) as *const usize)
-            == read_unaligned(offset_dst_ptr.add(*match_length) as *const usize)
-    {
-        *match_length += size_of::<usize>();
-    }
 }
 
 /// Represents a match in the LZ77 algorithm.
