@@ -64,13 +64,17 @@ pub unsafe fn lz77_get_longest_match(
                 match_length = 2;
 
                 // Length is < 8 bytes. So we don't need to compare max_length.
+
                 // Note: This code is normally inefficient but LLVM optimizes it down to bitshifts
                 // nicely. Normally I'd do this by hand but letting LLVM do it means we get decent
                 // codegen for 32-bit too.
                 if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
                     match_length += 1;
-                    if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
-                        match_length += 1;
+
+                    // 32-bit can match +1 only (up to 3)
+                    // 64-bit can match +5, up to 7 ()
+                    #[cfg(target_pointer_width = "64")]
+                    {
                         if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
                             match_length += 1;
                             if *offset_src_ptr.add(match_length)
@@ -81,6 +85,11 @@ pub unsafe fn lz77_get_longest_match(
                                     == *offset_dst_ptr.add(match_length)
                                 {
                                     match_length += 1;
+                                    if *offset_src_ptr.add(match_length)
+                                        == *offset_dst_ptr.add(match_length)
+                                    {
+                                        match_length += 1;
+                                    }
                                 }
                             }
                         }
