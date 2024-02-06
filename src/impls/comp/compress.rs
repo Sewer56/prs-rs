@@ -3,9 +3,10 @@ use crate::impls::comp::{comp_dict::CompDict, lz77_matcher::lz77_get_longest_mat
 use core::{ptr::write_unaligned, slice};
 
 const MAX_OFFSET: usize = 0x1FFF;
-const SHORT_COPY_MAX_LENGTH: isize = 0x100;
-const SHORT_COPY_MAX_OFFSET: usize = 5;
-const SHORT_COPY_MIN_OFFSET: usize = 2;
+const SHORT_COPY_MAX_OFFSET: isize = 0x100;
+const COPY_MAX_LENGTH: isize = 0x100;
+const SHORT_COPY_MAX_LEN: usize = 5;
+const SHORT_COPY_MIN_LEN: usize = 2;
 
 /// Parameters
 ///
@@ -42,9 +43,9 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
         source_ofs += 1;
     }
 
-    // Loop through all the bytes, as long as there are less than SHORT_COPY_MAX_LENGTH bytes left.
+    // Loop through all the bytes, as long as there are less than COPY_MAX_LENGTH bytes left.
     // We elimiate a branch inside lz77_get_longest_match by doing this, saving a bit of perf.
-    while source_ofs < source_len.saturating_sub(SHORT_COPY_MAX_LENGTH as usize) {
+    while source_ofs < source_len.saturating_sub(COPY_MAX_LENGTH as usize) {
         // Get longest match.
         let result = lz77_get_longest_match(
             &mut dict,
@@ -52,7 +53,7 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
             source_len,
             source_ofs,
             MAX_OFFSET,
-            SHORT_COPY_MAX_LENGTH as usize,
+            COPY_MAX_LENGTH as usize,
             true,
         );
 
@@ -74,7 +75,7 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
             source_len,
             source_ofs,
             MAX_OFFSET,
-            SHORT_COPY_MAX_LENGTH as usize,
+            COPY_MAX_LENGTH as usize,
             false, // 👈 loop differs here
         );
 
@@ -118,9 +119,9 @@ unsafe fn encode_lz77_match(
     source: *const u8,
 ) {
     // Check for short copy.
-    if result.offset >= -SHORT_COPY_MAX_LENGTH
-        && result.length >= SHORT_COPY_MIN_OFFSET
-        && result.length <= SHORT_COPY_MAX_OFFSET
+    if result.offset >= -SHORT_COPY_MAX_OFFSET
+        && result.length >= SHORT_COPY_MIN_LEN
+        && result.length <= SHORT_COPY_MAX_LEN
     {
         write_short_copy(dest, &result, control_bit_position, control_byte_ptr);
         *source_ofs += result.length;
