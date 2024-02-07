@@ -3,14 +3,14 @@
 mod compress;
 mod createcompdict;
 mod decompress;
-mod estimate;
+mod calc_decompressed_size;
 mod util;
 
 use compress::bench_compress_file;
 use createcompdict::bench_create_dict;
 use criterion::{criterion_group, criterion_main, Criterion};
 use decompress::bench_decompress;
-use estimate::bench_estimate;
+use calc_decompressed_size::bench_estimate;
 
 #[cfg(not(target_os = "windows"))]
 use pprof::criterion::{Output, PProfProfiler};

@@ -22,10 +22,14 @@ You can [learn more about this theme here](https://reloaded-project.github.io/Re
 
 !!! info "System Info"
 
-  - Library Version: 0.1.0 (27th Jan 2024)
+  - Library Version: 0.1.0 (07 Feb 2024)
   - CPU: AMD Ryzen 9 5900X (12C/24T)
   - RAM: 32GB DDR4-3000 (16-17-17-35)
   - OS: Archlinux
+
+!!! note "The following reference numbers are based on PGO optimized builds of the library."
+  
+!!! warning "Performance numbers greatly depend on nature of input data. Data with long repeating padding compresses quicker."
 
 Reference numbers are single threaded, for data of approximately 150kB in size (uncompressed).
 
