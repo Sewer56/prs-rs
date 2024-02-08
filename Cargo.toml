@@ -24,6 +24,7 @@ csbindgen = "1.9.0"
 criterion = "0.5.1"
 rstest = "0.18.2"
 more-asserts = "0.3.1"
+walkdir = "2.4.0"
 
 [target.'cfg(unix)'.dev-dependencies]
 pprof = { version = "0.13", features = ["flamegraph", "criterion"] }
