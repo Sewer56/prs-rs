@@ -3,42 +3,11 @@
 [![Crates.io](https://img.shields.io/crates/v/prs-rs.svg)](https://crates.io/crates/prs-rs)
 [![Docs.rs](https://docs.rs/prs-rs/badge.svg)](https://docs.rs/prs-rs)
 [![CI](https://github.com/Sewer56/prs-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/Sewer56/prs-rs/actions)
-
------------------------
-
-## Additional Setup Required!!
-
-Additional setup might be required.  
-Once you do the stuff under this text, delete this section.  
-
-### Code Coverage
-To setup code coverage for this project. Login into [Codecov][codecov] and add this repository from your list of tracked repos.
-
-### Setup Documentation
-
-If you don't have a `docs/Reloaded` folder, an error occurred, and you might need to add it manually as submodule:
-
-```
-git submodule add https://github.com/Reloaded-Project/Reloaded.MkDocsMaterial.Themes.R2.git docs/Reloaded
-```
-
-Once you make your first commit to GitHub, you'll need to do the following:
-- Go to `Settings -> Pages` in your repo and select `gh-pages` branch to enable GitHub Pages.
-
-
-### Setup API Key
-
-You'll need to set up an API key to publish to `crates.io` on tag.
-
-- Go to `Settings -> Secrets -> Actions` in your repo and add environment secret named `CRATES_IO_TOKEN`.  
-- Paste your API key generated in [crates.io (Account Settings -> API Tokens)][crates-io-key].  
-
-
------------------------
+[![codecov](https://codecov.io/gh/Sewer56/prs-rs/graph/badge.svg?token=4Xsufoi2VD)](https://codecov.io/gh/Sewer56/prs-rs)
 
 ## About
 
-Rust port of the SEGA PRS Compression scheme
+Rust port of the SEGA PRS Compression scheme.
 
 You can learn more about this project in the [dedicated documentation page][docs].
 
@@ -53,8 +22,11 @@ git clone -c core.symlinks=true https://github.com/Sewer56/prs-rs.git
 ```
 
 ***Install Rust:***
-- Install the [Rust Toolchain.][rust-toolchain]***Setup IDE***
+- Install the [Rust Toolchain.][rust-toolchain]
+
+***Setup IDE:***
 - This repository is fully with VSCode. [Guidance below](#visual-studio-code-integration).
+
 ### Visual Studio Code Integration
 
 `Code`/`VSCode` is the de-facto Rust development environment.  
