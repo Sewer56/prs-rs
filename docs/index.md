@@ -1,6 +1,6 @@
 # About
 
-`prs_rs` is a pretty fast, barebones implementation of the SEGA PRS encoding scheme.
+`prs_rs` is an acceptably fast, barebones implementation of the SEGA PRS encoding scheme.
 
 It can compress, decompress and calculate the decompressed size of PRS encoded data.
 
@@ -182,6 +182,11 @@ Decompress (Decompress):
 Compress:
 
 - `16`-`108` MiB/s (Average: ~30MiB/s)
+
+!!! warning "Compression uses `4*FileSize` amount of RAM"
+
+I'm not a compression expert, I just used some brain cells and hope to have made a solution that is 
+'good enough'. The compression is also optimal, i.e. it will generate the smallest possible PRS file for the given input data.
 
 ## Technical Questions
 
