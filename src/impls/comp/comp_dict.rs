@@ -46,7 +46,7 @@ impl Drop for CompDict {
         unsafe {
             // dealloc buffer and box
             let layout = Layout::from_size_align_unchecked(
-                size_of::<MaxOffset>() * self.alloc_length,
+                self.alloc_length,
                 ALLOC_ALIGNMENT,
             );
             dealloc(self.buf.as_ptr() as *mut u8, layout);
