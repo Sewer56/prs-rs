@@ -2,7 +2,7 @@ extern crate alloc;
 use alloc::alloc::{alloc, dealloc};
 use alloc::boxed::Box;
 use alloc::vec;
-use core::ptr::{read, write, NonNull};
+use core::ptr::{write, NonNull};
 use core::slice;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
 
@@ -97,13 +97,15 @@ impl CompDict {
 
         // We will use this later to populate the dictionary.
         // This stores the location we start inserting offsets for each 2 byte sequence.
-        let mut dict_insert_entry_ptrs = Box::<[*mut MaxOffset; MAX_U16]>::new_uninit();
+        let alloc = alloc(Layout::new::<[*mut MaxOffset; MAX_U16]>()) as *mut [*mut MaxOffset; MAX_U16];
+        let mut dict_insert_entry_ptrs = Box::<[*mut MaxOffset; MAX_U16]>::from_raw(alloc);
+
 
         // Initialize all CompDictEntries
         let mut cur_ofs_addr = max_ofs_ptr;
         let mut cur_dict_entry = dict_entry_ptr;
         let mut cur_freq_tbl_entry = freq_table.as_ptr();
-        let mut cur_ofs_insert_ptr = dict_insert_entry_ptrs.as_mut_ptr() as *mut *mut MaxOffset;
+        let mut cur_ofs_insert_ptr = dict_insert_entry_ptrs.as_mut_ptr();
         let max_dict_entry = cur_dict_entry.add(MAX_U16);
 
         while cur_dict_entry < max_dict_entry {
@@ -124,8 +126,6 @@ impl CompDict {
             cur_dict_entry = cur_dict_entry.add(1);
             cur_ofs_insert_ptr = cur_ofs_insert_ptr.add(1);
         }
-
-        let mut dict_insert_entry_ptrs = dict_insert_entry_ptrs.assume_init();
 
         // Iterate over the data, and add each 2-byte sequence to the dictionary.
         #[cfg(not(target_pointer_width = "64"))]
@@ -154,7 +154,7 @@ impl CompDict {
 
             while data_ofs < data_len.saturating_sub(16) {
                 // Doing a lot of the `data.as_ptr().add()` is ugly, but it makes LLVM do a better job.
-                let chunk = read(data.as_ptr().add(data_ofs) as *const u64);
+                let chunk = read_unaligned(data.as_ptr().add(data_ofs) as *const u64);
 
                 // Process every 16-bit sequence starting at each byte within the 64-bit chunk
                 for shift in 0..7 {
@@ -170,7 +170,7 @@ impl CompDict {
 
                 // Handle the 16-bit number that spans the boundary between this chunk and the next
                 // Note: LLVM puts next_chunk in register and reuses it for next loop iteration (under x64), nothing special to do here.
-                let next_chunk = read(data.as_ptr().add(data_ofs + 8) as *const u64);
+                let next_chunk = read_unaligned(data.as_ptr().add(data_ofs + 8) as *const u64);
                 let next_chunk_byte = (next_chunk & 0xFF) << 8;
                 let key = ((chunk >> 56) | next_chunk_byte) as u16;
                 let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);

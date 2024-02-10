@@ -1,5 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(new_uninit)]
 
 pub mod comp;
 pub mod decomp;

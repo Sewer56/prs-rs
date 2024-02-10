@@ -8,9 +8,11 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
 
 === "Rust"
 
-    !!! warning "Requires Nightly Rust, and Unsafe"
+    !!! warning "Recommended Nightly Rust, and Unsafe"
 
     !!! note "We use `new_uninit` APIs to ensure we don't unnecessarily zero fill arrays we will immediately replace."
+
+    !!! note "If using stable rust, you can use `Box::from_raw` and `alloc` manually."
 
     ### Compress Data
     
