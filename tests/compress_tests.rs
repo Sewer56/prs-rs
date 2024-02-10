@@ -10,6 +10,7 @@ use rstest::rstest;
 #[case::model("Model.bin")]
 #[case::layout("ObjectLayout.bin")]
 #[case::worstcase("WorstCase.bin")]
+#[case::path("OriginalPath.bin")]
 fn can_compress_and_decompress_file(#[case] file_name: &str) {
     let original = load_sample_file(get_uncompressed_file_path(file_name));
     let mut comp_buf = vec![0_u8; prs_calculate_max_compressed_size(original.len())];

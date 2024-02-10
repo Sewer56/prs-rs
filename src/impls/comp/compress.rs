@@ -1,6 +1,6 @@
 use super::lz77_matcher::Lz77Match;
 use crate::impls::comp::{comp_dict::CompDict, lz77_matcher::lz77_get_longest_match};
-use core::{ptr::write_unaligned, slice};
+use core::{ops::Sub, ptr::write_unaligned, slice};
 
 const MAX_OFFSET: usize = 0x1FFF;
 const SHORT_COPY_MAX_OFFSET: isize = 0x100;
@@ -68,7 +68,9 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     }
 
     // Handle the remaining bytes.
-    while source_ofs < source_len {
+    // We sub 1 because `lz77_get_longest_match` reads the next 2 bytes.
+    // If our file happens to be 1 byte from the end, we can't read 2 bytes.
+    while source_ofs < source_len.saturating_sub(1) {
         let result = lz77_get_longest_match(
             &mut dict,
             source,
@@ -87,6 +89,12 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
             &mut source_ofs,
             source,
         );
+    }
+
+    // There is potentially one last remaining byte.
+    if source_ofs == source_len.saturating_sub(1) {
+        append_control_bit(1, &mut dest, &mut control_bit_position, &mut control_byte_ptr);
+        append_byte(*source.add(source_ofs), &mut dest);
     }
 
     // Finish the PRS file
