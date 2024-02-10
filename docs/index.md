@@ -104,7 +104,7 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
     ### Compress Data
 
     ```csharp
-    public static unsafe Span<byte> CompressData(byte[] sourceData)
+    public static unsafe Span<byte> CompressData(Span<byte> sourceData)
     {
         fixed (byte* srcPtr = sourceData)
         {
@@ -125,7 +125,7 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
     Decompressing data requires ensuring the destination buffer is adequately sized.
 
     ```csharp
-    public static unsafe Span<byte> DecompressData(byte[] compressedData)
+    public static unsafe Span<byte> DecompressData(Span<byte> compressedData)
     {
       // Calculate the decompressed size to allocate enough memory
       fixed (byte* srcPtr = compressedData)
@@ -147,7 +147,7 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
     If you need to calculate the size of the decompressed data without actually decompressing it:
 
     ```csharp
-    public static unsafe nuint DecompressData(byte[] compressedData)
+    public static unsafe nuint DecompressData(Span<byte> compressedData)
     {
       // Calculate the decompressed size to allocate enough memory
       fixed (byte* srcPtr = compressedData)
