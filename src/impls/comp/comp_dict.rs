@@ -95,7 +95,8 @@ impl CompDict {
         let dict_entry_ptr = buf as *mut CompDictEntry;
         let max_ofs_ptr = buf.add(entry_section_len + DICTIONARY_PADDING) as *mut MaxOffset;
 
-        // We will use this later to populate
+        // We will use this later to populate the dictionary.
+        // This stores the location we start inserting offsets for each 2 byte sequence.
         let mut dict_insert_entry_ptrs = Box::<[*mut MaxOffset; MAX_U16]>::new_uninit();
 
         // Initialize all CompDictEntries
@@ -151,7 +152,7 @@ impl CompDict {
             let mut data_ofs = 0;
             let data_len = data.len();
 
-            while data_ofs <= data_len.saturating_sub(16) {
+            while data_ofs < data_len.saturating_sub(16) {
                 // Doing a lot of the `data.as_ptr().add()` is ugly, but it makes LLVM do a better job.
                 let chunk = read(data.as_ptr().add(data_ofs) as *const u64);
 
@@ -229,7 +230,7 @@ impl CompDict {
             let data_len = data.len();
             let mut data_ofs = 0;
 
-            while data_ofs <= data_len.saturating_sub(16) {
+            while data_ofs < data_len.saturating_sub(16) {
                 let chunk = read_unaligned(data.as_ptr().add(data_ofs) as *const u64);
 
                 // Process every 16-bit sequence starting at each byte within the 64-bit chunk
