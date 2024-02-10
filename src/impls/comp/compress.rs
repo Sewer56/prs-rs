@@ -1,6 +1,6 @@
 use super::lz77_matcher::Lz77Match;
 use crate::impls::comp::{comp_dict::CompDict, lz77_matcher::lz77_get_longest_match};
-use core::{ops::Sub, ptr::write_unaligned, slice};
+use core::{ptr::write_unaligned, slice};
 
 const MAX_OFFSET: usize = 0x1FFF;
 const SHORT_COPY_MAX_OFFSET: isize = 0x100;
