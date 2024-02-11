@@ -1,5 +1,7 @@
 pub mod helpers;
 
+use std::fs::write;
+
 use helpers::samples::{get_uncompressed_file_path, load_sample_file};
 use prs_rs::comp::prs_compress_unsafe;
 use prs_rs::decomp::prs_decompress_unsafe;
@@ -10,7 +12,7 @@ use rstest::rstest;
 #[case::model("Model.bin")]
 #[case::layout("ObjectLayout.bin")]
 #[case::worstcase("WorstCase.bin")]
-#[case::path("OriginalPath.bin")]
+#[case::badending("BadEnding.bin")]
 fn can_compress_and_decompress_file(#[case] file_name: &str) {
     let original = load_sample_file(get_uncompressed_file_path(file_name));
     let mut comp_buf = vec![0_u8; prs_calculate_max_compressed_size(original.len())];
