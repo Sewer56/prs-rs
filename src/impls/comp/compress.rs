@@ -92,8 +92,13 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     }
 
     // There is potentially one last remaining byte.
-    if source_ofs == source_len.saturating_sub(1) {
-        append_control_bit(1, &mut dest, &mut control_bit_position, &mut control_byte_ptr);
+    if source_ofs == source_len.wrapping_sub(1) {
+        append_control_bit(
+            1,
+            &mut dest,
+            &mut control_bit_position,
+            &mut control_byte_ptr,
+        );
         append_byte(*source.add(source_ofs), &mut dest);
     }
 
