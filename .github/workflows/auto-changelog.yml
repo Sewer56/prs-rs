@@ -8,6 +8,8 @@ on:
 jobs:
   generate_and_upload_changelog:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Check out code
