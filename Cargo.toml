@@ -5,7 +5,7 @@ edition = "2021"
 description = "High performance compressor/decompressor for the SEGA PRS Compression scheme"
 repository = "https://github.com/Sewer56/prs-rs"
 license-file = "LICENSE"
-readme = "README.md"
+readme = "README.MD"
 include = ["src/**/*"]
 
 [features]
