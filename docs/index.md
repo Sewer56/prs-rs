@@ -8,7 +8,15 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
 
 === "Rust"
 
-    !!! warning "Recommended Nightly Rust, and Unsafe"
+    !!! warning "These examples use Nightly Rust to initalize uninitialized memory"
+
+        You can replicate with Stable Rust by doing something like this.
+
+        ```rust
+        let layout = Layout::from_size_align(decompressed_len, size_of::<usize>()).unwrap();
+        let raw_ptr = unsafe { alloc(layout) };
+        let mut decompressed_data = unsafe { Box::from_raw(slice::from_raw_parts_mut(raw_ptr, decompressed_len)) };
+        ```
 
     ### Compress Data
     
@@ -19,7 +27,7 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
     let max_comp_len = prs_calculate_max_compressed_size(src_len);
 
     // Allocate enough memory for the compressed data
-    let mut dest = vec![0_u8; max_comp_len]; // ensure zero initialized
+    let mut decompressed_data = Box::<[u8]>::new_uninit_slice(max_comp_len);
     let bytes_written = prs_compress_unsafe(src.as_ptr(), src.len(), dest.as_mut_ptr() as *mut u8);
 
     // Tell Rust our memory is initialized and trim the returned slice.
@@ -30,16 +38,6 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
     This API accepts slices or raw pointers as `destination`.
 
     ### Decompress Data
-
-    ```rust
-    let compressed_data: &[u8] = &[]; // some data
-    let layout = Layout::from_size_align(decompressed_len, size_of::<usize>()).unwrap();
-    let raw_ptr = unsafe { alloc(layout) };
-    let mut decompressed_data = unsafe { Box::from_raw(slice::from_raw_parts_mut(raw_ptr, decompressed_len)) };
-    let decompressed_size = prs_rs::decomp::prs_decompress_unsafe(compressed_data.as_ptr(), decompressed_data.as_mut_ptr() as *mut u8);
-    ```
-
-    Bit simpler if you have `nightly` Rust:
 
     ```rust
     let compressed_data: &[u8] = &[]; // some data
@@ -71,7 +69,7 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
     unsigned char src[] = "Your data here";
     size_t src_len = sizeof(src);
     size_t max_compressed_size = prs_calculate_max_compressed_size(src_len);
-    unsigned char* dest = (unsigned char*)calloc(1, max_compressed_size); // Use 'calloc' for zero initialization.
+    unsigned char* dest = (unsigned char*)malloc(max_compressed_size); // Dynamically allocate memory
     size_t bytes_written = prs_compress(src, dest, src_len);
     ```
 
@@ -115,7 +113,7 @@ It can compress, decompress and calculate the decompressed size of PRS encoded d
         {
             // Get the maximum possible size of the compressed data
             nuint maxCompressedSize = NativeMethods.prs_calculate_max_compressed_size((nuint)sourceData.Length);
-            byte[] dest = new byte[(int)maxCompressedSize]; // needs to be zero initialized
+            byte[] dest = GC.AllocateUninitializedArray<byte>((int)maxCompressedSize);
             fixed (byte* destPtr = &dest[0])
             {
                 nuint compressedSize = NativeMethods.prs_compress(srcPtr, destPtr, (nuint)sourceData.Length);

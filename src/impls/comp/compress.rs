@@ -11,7 +11,7 @@ const SHORT_COPY_MIN_LEN: usize = 2;
 /// Parameters
 ///
 /// - `source`: A pointer to the decompressed data.
-/// - `destination`: A pointer to where to put the compressed data. MUST BE ZERO FILLED.
+/// - `destination`: A pointer to where to put the compressed data.
 /// - `source_len`: Length of the compressed data.
 ///
 /// # Returns
@@ -255,6 +255,7 @@ unsafe fn append_control_bit(
 #[inline]
 fn reserve_control_byte(dest: &mut *mut u8) -> *mut u8 {
     unsafe {
+        **dest = 0; // Make suer it's zeroed in case user passes non-zeroed buffer.
         let result = *dest;
         *dest = dest.add(1);
         result

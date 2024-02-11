@@ -16,7 +16,7 @@ namespace prs_rs.Net.Sys
 
 
 
-        /// <summary>Compresses the given data in `source`, placing it in `destimation`.  Parameters  - `src`: A pointer to the compressed data. - `src_len`: Length of the compressed data. - `destination`: A pointer to the decompressed data to be written. MUST BE ZERO FILLED.  # Returns  Number of bytes written to `destination`.  # Safety  It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`]) and the remaining parameters are valid.</summary>
+        /// <summary>Compresses the given data in `source`, placing it in `destimation`.  Parameters  - `src`: A pointer to the compressed data. - `src_len`: Length of the compressed data. - `destination`: A pointer to the decompressed data to be written.  # Returns  Number of bytes written to `destination`.  # Safety  It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`]) and the remaining parameters are valid.</summary>
         [DllImport(__DllName, EntryPoint = "prs_compress", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
         public static extern nuint prs_compress(byte* src, byte* dest, nuint src_len);
 

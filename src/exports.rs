@@ -8,7 +8,7 @@ use core::ffi::c_uchar;
 ///
 /// - `src`: A pointer to the compressed data.
 /// - `src_len`: Length of the compressed data.
-/// - `destination`: A pointer to the decompressed data to be written. MUST BE ZERO FILLED.
+/// - `destination`: A pointer to the decompressed data to be written.
 ///
 /// # Returns
 ///
