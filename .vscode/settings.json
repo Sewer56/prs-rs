@@ -7,7 +7,8 @@
         "cobertura.xml"
     ],
     "rust-analyzer.linkedProjects": [
-        "./Cargo.toml"
+        "./Cargo.toml",
+        "./tools/cli/Cargo.toml"
     ],
     "rust-analyzer.cargo.features": "all"
 }
