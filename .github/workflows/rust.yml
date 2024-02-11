@@ -192,6 +192,23 @@ jobs:
         with:
           path: artifacts
 
+      - name: Upload to NuGet
+        shell: pwsh
+        run: |
+          $items = Get-ChildItem -Path "artifacts/**.nupkg" -Recurse
+          Foreach ($item in $items)
+          {
+              Write-Host "Pushing $item"
+              dotnet nuget push "$item" -k "${{ secrets.NUGET_KEY }}" -s "https://api.nuget.org/v3/index.json" --skip-duplicate
+          }
+
+          $items = Get-ChildItem -Path "artifacts/**.snupkg" -Recurse
+          Foreach ($item in $items)
+          {
+              Write-Host "Pushing Symbol Package $item"
+              dotnet nuget push "$item" -k "${{ secrets.NUGET_KEY }}" -s "https://api.nuget.org/v3/index.json" --skip-duplicate
+          }
+
       - name: Compress Artifacts
         shell: bash
         run: |
@@ -220,20 +237,3 @@ jobs:
         uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/publish-crate@v1
         with:
           token: ${{ secrets.CRATES_IO_TOKEN }}
-
-      - name: Upload to NuGet
-        shell: pwsh
-        run: |
-          $items = Get-ChildItem -Path "**.nupkg" -Recurse
-          Foreach ($item in $items)
-          {
-              Write-Host "Pushing $item"
-              dotnet nuget push "$item" -k "${{ secrets.NUGET_KEY }}" -s "https://api.nuget.org/v3/index.json" --skip-duplicate
-          }
-
-          $items = Get-ChildItem -Path "**.snupkg" -Recurse
-          Foreach ($item in $items)
-          {
-              Write-Host "Pushing Symbol Package $item"
-              dotnet nuget push "$item" -k "${{ secrets.NUGET_KEY }}" -s "https://api.nuget.org/v3/index.json" --skip-duplicate
-          }
