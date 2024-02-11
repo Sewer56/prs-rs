@@ -1,10 +1,11 @@
 [package]
 name = "prs-rs"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 description = "High performance compressor/decompressor for the SEGA PRS Compression scheme"
 repository = "https://github.com/Sewer56/prs-rs"
 license-file = "LICENSE"
+readme = "README.md"
 include = ["src/**/*"]
 
 [features]
