@@ -16,9 +16,9 @@ pub fn create_comp_dict(data: &[u8]) -> u32 {
 ///
 /// Parameters
 ///
-/// - `src`: A pointer to the compressed data.
-/// - `src_len`: Length of the compressed data.
-/// - `destination`: A pointer to the decompressed data to be written.
+/// - `src`: A pointer to the decompressed data.
+/// - `src_len`: Length of the decompressed data.
+/// - `destination`: A pointer to the compressed data to be written. MUST BE ZERO FILLED.
 ///
 /// # Returns
 ///

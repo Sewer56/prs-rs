@@ -10,8 +10,8 @@ const SHORT_COPY_MIN_LEN: usize = 2;
 
 /// Parameters
 ///
-/// - `source`: A pointer to the compressed data.
-/// - `destination`: A pointer to the decompressed data.
+/// - `source`: A pointer to the decompressed data.
+/// - `destination`: A pointer to where to put the compressed data. MUST BE ZERO FILLED.
 /// - `source_len`: Length of the compressed data.
 ///
 /// # Returns
