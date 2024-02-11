@@ -1,0 +1,29 @@
+[package]
+name = "prs-rs-cli"
+version = "0.1.0"
+edition = "2021"
+description = "High performance compressor/decompressor for the SEGA PRS Compression scheme (CLI Tool)"
+repository = "https://github.com/Sewer56/prs-rs"
+license-file = "LICENSE"
+include = ["**/*"]
+
+[dependencies]
+prs-rs = { path = "../.." }
+argh = "0.1.12"
+walkdir = "2.4.0"
+rayon = "1.5.1"
+
+# Profile Build
+[profile.profile]
+inherits = "release"
+debug = true
+codegen-units = 1
+lto = true
+strip = false  # No stripping!!
+
+# Optimized Release Build
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true  # Automatically strip symbols from the binary.
+panic = "abort"
