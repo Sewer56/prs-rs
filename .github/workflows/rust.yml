@@ -27,7 +27,7 @@ jobs:
       - id: test-rust
         uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/test-and-coverage@v1 # upgrade if needed
         with:
-          rust_branch: 'nightly'
+          rust_branch: 'stable'
 
   build-c-libs:
     strategy:
