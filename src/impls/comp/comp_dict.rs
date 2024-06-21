@@ -45,10 +45,7 @@ impl Drop for CompDict {
     fn drop(&mut self) {
         unsafe {
             // dealloc buffer and box
-            let layout = Layout::from_size_align_unchecked(
-                self.alloc_length,
-                ALLOC_ALIGNMENT,
-            );
+            let layout = Layout::from_size_align_unchecked(self.alloc_length, ALLOC_ALIGNMENT);
             dealloc(self.buf.as_ptr() as *mut u8, layout);
         }
     }
@@ -97,9 +94,9 @@ impl CompDict {
 
         // We will use this later to populate the dictionary.
         // This stores the location we start inserting offsets for each 2 byte sequence.
-        let alloc = alloc(Layout::new::<[*mut MaxOffset; MAX_U16]>()) as *mut [*mut MaxOffset; MAX_U16];
+        let alloc =
+            alloc(Layout::new::<[*mut MaxOffset; MAX_U16]>()) as *mut [*mut MaxOffset; MAX_U16];
         let mut dict_insert_entry_ptrs = Box::<[*mut MaxOffset; MAX_U16]>::from_raw(alloc);
-
 
         // Initialize all CompDictEntries
         let mut cur_ofs_addr = max_ofs_ptr;
@@ -132,7 +129,7 @@ impl CompDict {
         {
             let data_ptr_start = data.as_ptr();
             let mut data_ptr = data.as_ptr();
-            let data_ptr_max = data.as_ptr().add(data.len() - 1);
+            let data_ptr_max = data.as_ptr().add(data.len().saturating_sub(1));
             debug_assert!(data.len() as MaxOffset <= MaxOffset::MAX);
 
             while data_ptr < data_ptr_max {
@@ -213,7 +210,7 @@ impl CompDict {
         {
             // Iterate over the data, and add each 2-byte sequence to the dictionary.
             let data_ptr = data.as_ptr();
-            let data_ofs_max = data.len() - 1;
+            let data_ofs_max = data.len().saturating_sub(1);
             let mut data_ofs = 0;
             while data_ofs < data_ofs_max {
                 // LLVM successfully unrolls this
