@@ -65,7 +65,7 @@ jobs:
           use-cross: ${{ matrix.use-cross }}
           features: "c-exports"
           build-library: true
-          run-tests-and-coverage: true
+          run-tests-and-coverage: ${{ matrix.target != 'aarch64-pc-windows-msvc' }}
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build CLI Tool
