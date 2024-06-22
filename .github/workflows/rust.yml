@@ -84,16 +84,16 @@ jobs:
           submodules: recursive
 
       - name: Generate C++ bindings
-        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/generate-bindings@v1
+        uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config_file: cbindgen_cpp.toml
-          header_file: bindings_cpp.hpp
+          config-file: cbindgen_cpp.toml
+          output-header-file: bindings_cpp.hpp
   
-      - name: Generate C bindings
-        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/generate-bindings@v1
+      - name: Generate C bindings 
+        uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config_file: cbindgen_c.toml
-          header_file: bindings_c.h
+          config-file: cbindgen_c.toml 
+          output-header-file: bindings_c.h
 
   build-dotnet-library:
     needs: build-and-test
