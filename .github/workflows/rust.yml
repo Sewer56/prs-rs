@@ -66,6 +66,7 @@ jobs:
           features: "c-exports"
           build-library: true
           run-tests-and-coverage: true
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build CLI Tool
         uses: Reloaded-Project/devops-rust-lightweight-binary@v1 # upgrade if needed
