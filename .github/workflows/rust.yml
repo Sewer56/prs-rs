@@ -100,13 +100,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build and Package .NET Library
-        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/build-dotnet-library@dotnet-bindings
+      - name: Build and Package .NET Wrapper
+        uses: Reloaded-Project/devops-rust-c-library-to-dotnet@v1
         with:
-          targets: 'x86_64-unknown-linux-gnu,i686-unknown-linux-gnu,aarch64-unknown-linux-gnu,armv7-unknown-linux-gnueabihf,x86_64-pc-windows-msvc,i686-pc-windows-msvc,aarch64-pc-windows-msvc,x86_64-apple-darwin,aarch64-apple-darwin'
+          csharp-project-path: bindings/csharp
 
   publish-crate:
     permissions:
