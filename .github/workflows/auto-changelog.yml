@@ -7,20 +7,22 @@ on:
 
 jobs:
   generate_and_upload_changelog:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
+    runs-on: ubuntu-latest 
+    
     steps:
-      - name: Check out code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           submodules: recursive
-
-      - name: Generate and Upload Changelog
-        id: changelog
-        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/upload-changelog@v1 
+          
+      - name: Generate changelog
+        uses: Reloaded-Project/devops-changelog@v1
         with:
+          output: CHANGELOG.md
+          unreleased: true
+          commit-limit: 50
+          upload-artifact: true
+          upload-release: true
           is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
           release-tag: ${{ github.ref_name }}
-          changelog-template: "changelog.hbs"
