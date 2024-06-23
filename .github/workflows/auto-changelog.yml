@@ -8,7 +8,9 @@ on:
 jobs:
   generate_and_upload_changelog:
     runs-on: ubuntu-latest 
-    
+    permissions: 
+      contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
