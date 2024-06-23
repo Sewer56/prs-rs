@@ -14,7 +14,7 @@ c-exports = []
 std = []
 
 # See README.md for more information.
-pgo = []
+pgo = [ "c-exports" ]
 
 # C# Bindings
 [build-dependencies]

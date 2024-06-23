@@ -1,18 +1,18 @@
 #![allow(dead_code, unused_imports)]
 
+mod calc_decompressed_size;
 mod compress;
 mod createcompdict;
 mod decompress;
-mod calc_decompressed_size;
-mod util;
 mod gen_pgo_data;
+mod util;
 
+use calc_decompressed_size::bench_estimate;
 use compress::bench_compress_file;
 use createcompdict::bench_create_dict;
 use criterion::{criterion_group, criterion_main, Criterion};
 use decompress::bench_decompress;
-use calc_decompressed_size::bench_estimate;
-
+#[cfg(feature = "pgo")]
 use gen_pgo_data::generate_pgo_data;
 #[cfg(not(target_os = "windows"))]
 use pprof::criterion::{Output, PProfProfiler};

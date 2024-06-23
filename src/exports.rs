@@ -19,6 +19,7 @@ use core::ffi::c_uchar;
 /// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`])
 /// and the remaining parameters are valid.
 #[no_mangle]
+#[inline(never)]
 pub unsafe extern "C" fn prs_compress(
     src: *const c_uchar,
     dest: *mut c_uchar,
@@ -47,6 +48,7 @@ pub unsafe extern "C" fn prs_compress(
 /// - Rounding file to next byte
 /// - Having to write 00 opcode after a compressed sequence of bytes to terminate.
 #[no_mangle]
+#[inline(never)]
 pub extern "C" fn prs_calculate_max_compressed_size(source_len: usize) -> usize {
     crate::util::prs_calculate_max_compressed_size(source_len)
 }
@@ -69,6 +71,7 @@ pub extern "C" fn prs_calculate_max_compressed_size(source_len: usize) -> usize 
 /// Function is safe as long as the pointer points to valid PRS compressed data with
 /// a terminator byte.
 #[no_mangle]
+#[inline(never)]
 pub unsafe extern "C" fn prs_calculate_decompressed_size(src: *const c_uchar) -> usize {
     prs_calculate_decompressed_size_impl(src)
 }
@@ -100,6 +103,7 @@ pub unsafe extern "C" fn prs_calculate_decompressed_size(src: *const c_uchar) ->
 /// Function is safe as long as the source points to valid PRS compressed data with
 /// a terminator byte. The destination should be large enough to store the decompressed data.
 #[no_mangle]
+#[inline(never)]
 pub unsafe extern "C" fn prs_decompress(src: *const c_uchar, dest: *mut c_uchar) -> usize {
     crate::decomp::prs_decompress_unsafe(src, dest)
 }
