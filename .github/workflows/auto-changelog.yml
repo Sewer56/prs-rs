@@ -22,9 +22,8 @@ jobs:
         uses: Reloaded-Project/devops-changelog@v1
         with:
           output: CHANGELOG.md
-          unreleased: true
-          commit-limit: 50
           upload-artifact: true
           upload-release: true
+          override-starting-version: true
           is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
           release-tag: ${{ github.ref_name }}
