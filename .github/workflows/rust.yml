@@ -117,57 +117,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/') 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Test Publish Action
+        uses: Reloaded-Project/devops-publish-action@v1-test
         with:
-          submodules: recursive
-
-      - name: ↙️ Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Upload to NuGet
-        shell: pwsh
-        run: |
-          $items = Get-ChildItem -Path "artifacts/**.nupkg" -Recurse
-          Foreach ($item in $items)
-          {
-              Write-Host "Pushing $item"
-              dotnet nuget push "$item" -k "${{ secrets.NUGET_KEY }}" -s "https://api.nuget.org/v3/index.json" --skip-duplicate
-          }
-
-          $items = Get-ChildItem -Path "artifacts/**.snupkg" -Recurse
-          Foreach ($item in $items)
-          {
-              Write-Host "Pushing Symbol Package $item"
-              dotnet nuget push "$item" -k "${{ secrets.NUGET_KEY }}" -s "https://api.nuget.org/v3/index.json" --skip-duplicate
-          }
-
-      - name: Compress Artifacts
-        shell: bash
-        run: |
-          dir="artifacts"
-          if [ ! -d "$dir" ]; then
-            echo "Directory $dir does not exist. No artifacts found."
-            exit 0
-          fi
-
-          for subdir in "$dir"/*; do
-            if [ -d "$subdir" ]; then
-              base=$(basename "$subdir")
-              zip -r "$dir/$base.zip" "$subdir"
-              rm -r "$subdir"
-            fi
-          done
-          ls -A ./artifacts
-
-      - name: GitHub Release Artifacts
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            artifacts/*
-
-      - name: Publish to crates.io
-        uses: Reloaded-Project/reloaded-project-configurations-rust/.github/actions/publish-crate@v1
-        with:
-          token: ${{ secrets.CRATES_IO_TOKEN }}
+          crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
+          nuget-api-key: ${{ secrets.NUGET_KEY }}
+          artifacts-directory: 'artifacts'
