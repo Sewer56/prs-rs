@@ -19,7 +19,7 @@ use core::{ptr::write_unaligned, slice};
 /// - [MaxOffset; file_num_bytes] (offsets), variable size. This buffer stores offsets of all items of 2 byte combinations.
 ///
 /// Which is:
-/// - 12 * 64K = 768K
+/// - 12 * 64K = 768K or 1.5M
 /// - 4 * WINDOW_SIZE = 4 * 64K = 256K
 const WINDOW_SIZE: usize = u16::MAX as usize;
 

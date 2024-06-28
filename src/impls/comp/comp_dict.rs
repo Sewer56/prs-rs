@@ -7,6 +7,7 @@ use core::slice;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
 
 type MaxOffset = u32;
+type FreqCountType = u32;
 const MAX_U16: usize = 65536;
 const ALLOC_ALIGNMENT: usize = 64; // x86 cache line
 
@@ -40,7 +41,7 @@ impl Drop for CompDict {
         unsafe {
             // dealloc buffer and box
             let layout = Layout::from_size_align_unchecked(self.alloc_length, ALLOC_ALIGNMENT);
-            dealloc(self.buf.as_ptr() as *mut u8, layout);
+            dealloc(self.buf.as_ptr(), layout);
         }
     }
 }
@@ -231,9 +232,9 @@ impl CompDict {
     ///
     /// # Parameters
     /// - `data`: The data to create the frequency table from.
-    pub(crate) unsafe fn create_frequency_table(data: &[u8]) -> Box<[MaxOffset; MAX_U16]> {
+    pub(crate) unsafe fn create_frequency_table(data: &[u8]) -> Box<[FreqCountType; MAX_U16]> {
         // This actually has no overhead.
-        let mut result: Box<[MaxOffset; MAX_U16]> =
+        let mut result: Box<[FreqCountType; MAX_U16]> =
             vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
 
         #[cfg(not(target_pointer_width = "64"))]
