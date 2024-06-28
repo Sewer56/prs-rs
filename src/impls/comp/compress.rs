@@ -16,10 +16,10 @@ use core::{ptr::write_unaligned, slice};
 ///
 /// As per CompDict Layout
 /// - [CompDictEntry; MAX_U16] (dict), constant size.
-/// - [MaxOffset; file_num_bytes] (offsets), variable size. This buffer stores offsets of all items of 2 byte combinations.
+/// - [MaxOffset; WINDOW_SIZE] (offsets), variable size. [4*WINDOW_SIZE]
 ///
 /// Which is:
-/// - 12 * 64K = 768K
+/// - 24 * 64K = [1.5M on 64-bit, else 750K]
 /// - 4 * WINDOW_SIZE = 4 * 64K = 256K
 const WINDOW_SIZE: usize = u16::MAX as usize;
 
