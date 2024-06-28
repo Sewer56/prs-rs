@@ -153,7 +153,8 @@ mod tests {
     #[test]
     fn test_longest_match_with_repetition() {
         let data = b"abcabcabcabcabc";
-        let mut dict = unsafe { CompDict::new(data) };
+        let mut dict = CompDict::new(data.len());
+        unsafe { dict.init(data, 0) }
 
         // Longest match for "abc" starting from index 3 should be of length 12
         let match_result = unsafe {
@@ -166,7 +167,8 @@ mod tests {
     #[test]
     fn test_no_match() {
         let data = b"abcdefgh";
-        let mut dict = unsafe { CompDict::new(data) };
+        let mut dict = CompDict::new(data.len());
+        unsafe { dict.init(data, 0) }
 
         // No repetition, so no match
         let match_result = unsafe {
@@ -178,7 +180,8 @@ mod tests {
     #[test]
     fn test_multiple_matches() {
         let data = b"ababababab";
-        let mut dict = unsafe { CompDict::new(data) };
+        let mut dict = CompDict::new(data.len());
+        unsafe { dict.init(data, 0) }
 
         // Multiple "ab" patterns, longest match from index 2 should be length 8
         let match_result = unsafe {
@@ -191,7 +194,8 @@ mod tests {
     #[test]
     fn test_boundary_conditions() {
         let data = b"ababababab";
-        let mut dict = unsafe { CompDict::new(data) };
+        let mut dict = CompDict::new(data.len());
+        unsafe { dict.init(data, 0) }
 
         // Testing boundary condition: match at the very end
         let match_result = unsafe {
@@ -210,7 +214,7 @@ mod tests {
 
         // Testing boundary condition: no match beyond data length
         // Uncommented due to out of bounds access not present in actual workloads.
-        /* 
+        /*
         let match_result = unsafe {
             lz77_get_longest_match(
                 &mut dict,
@@ -229,7 +233,8 @@ mod tests {
     #[test]
     fn test_last_match_on_boundary() {
         let data = b"acacacabab";
-        let mut dict = unsafe { CompDict::new(data) };
+        let mut dict = CompDict::new(data.len());
+        unsafe { dict.init(data, 0) }
 
         // Testing boundary condition: match at the very end, when very end is only pattern
         let match_result = unsafe {

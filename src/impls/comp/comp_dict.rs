@@ -6,14 +6,6 @@ use core::ptr::{write, NonNull};
 use core::slice;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
 
-// Note: Usage of this dict can be improved to reduce memory usage at cost of low runtime overhead, however
-// given the nature of the PRS format being used on pre-2010 games, and usually files under 100MiB,
-// I don't consider it worthwhile to increase complexity (and reduce perf). If there's a memory constrained
-// scenario, I'll consider it however.
-
-// In any case, this dictionary, when applied over a whole file, causes the compression operation to take
-// 4xFileSize amount of RAM.
-
 type MaxOffset = u32;
 const MAX_U16: usize = 65536;
 const ALLOC_ALIGNMENT: usize = 64; // x86 cache line
@@ -21,6 +13,8 @@ const ALLOC_ALIGNMENT: usize = 64; // x86 cache line
 // Round up to next multiple of ALLOC_ALIGNMENT
 const DICTIONARY_PADDING: usize =
     (ALLOC_ALIGNMENT - (size_of::<[CompDictEntry; MAX_U16]>() % ALLOC_ALIGNMENT)) % ALLOC_ALIGNMENT;
+
+const ENTRY_SECTION_LEN: usize = size_of::<[CompDictEntry; MAX_U16]>();
 
 /// Dictionary for PRS compression.
 ///
@@ -36,8 +30,8 @@ pub struct CompDict {
     /// Our memory allocation is here.
     /// Layout:
     /// - [CompDictEntry; MAX_U16] (dict), constant size
-    /// - [MaxOffset; file_num_bytes] (offsets), variable size. This buffer stores offsets of all items of 2 byte combinations.
-    buf: NonNull<MaxOffset>,
+    /// - [MaxOffset; data_len_num_bytes] (offsets), variable size. This buffer stores offsets of all items of 2 byte combinations.
+    buf: NonNull<u8>,
     alloc_length: usize, // length of data that 'dict' and 'offsets' were made with
 }
 
@@ -73,38 +67,66 @@ pub struct CompDictEntry {
 }
 
 impl CompDict {
-    /// Create a new [`CompDict`] from a given slice of bytes.
+    /// Create a new [`CompDict`] without initializing it.
+    ///
+    /// # Parameters
+    ///
+    /// - `data_len`: The length of the data that will be used to initialize the dictionary.
+    pub fn new(data_len: usize) -> Self {
+        unsafe {
+            // constant
+            let offset_section_len = size_of::<MaxOffset>() * data_len;
+            let alloc_size = ENTRY_SECTION_LEN + DICTIONARY_PADDING + offset_section_len;
+
+            let layout = Layout::from_size_align_unchecked(alloc_size, ALLOC_ALIGNMENT);
+            let buf = alloc(layout);
+
+            CompDict {
+                buf: NonNull::new_unchecked(buf),
+                alloc_length: alloc_size,
+            }
+        }
+    }
+
+    /// Initialize the [`CompDict`] with the given data and offset.
     ///
     /// # Parameters
     ///
     /// - `data`: The data to create the dictionary from.
-    pub(crate) unsafe fn new(data: &[u8]) -> CompDict {
-        let freq_table = Self::create_frequency_table(data);
-
-        // Preallocate the buffer Dict Entries and Offsets
-        let entry_section_len = size_of::<[CompDictEntry; MAX_U16]>(); // constant
-        let offset_section_len = size_of::<MaxOffset>() * data.len();
-        let alloc_size = entry_section_len + DICTIONARY_PADDING + offset_section_len;
-
-        let layout = Layout::from_size_align_unchecked(alloc_size, ALLOC_ALIGNMENT);
-        let buf = alloc(layout);
-
-        let dict_entry_ptr = buf as *mut CompDictEntry;
-        let max_ofs_ptr = buf.add(entry_section_len + DICTIONARY_PADDING) as *mut MaxOffset;
+    /// - `offset`: The offset to add to the offsets in the dictionary.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe as it operates on raw pointers and assumes that
+    /// the `CompDict` has been properly allocated with enough space for `data`.
+    pub unsafe fn init(&mut self, data: &[u8], offset: usize) {
+        let dict_entry_ptr = self.buf.as_ptr() as *mut CompDictEntry;
+        let max_ofs_ptr =
+            self.buf
+                .as_ptr()
+                .add(ENTRY_SECTION_LEN + DICTIONARY_PADDING) as *mut MaxOffset;
 
         // We will use this later to populate the dictionary.
-        // This stores the location we start inserting offsets for each 2 byte sequence.
+        // The `dict_insert_entry_ptrs` is a buffer which stores the pointer to the current location
+        // where we need to insert the offset for a given 2 byte sequence (hence length MAX_U16).
         let alloc =
             alloc(Layout::new::<[*mut MaxOffset; MAX_U16]>()) as *mut [*mut MaxOffset; MAX_U16];
+
         let mut dict_insert_entry_ptrs = Box::<[*mut MaxOffset; MAX_U16]>::from_raw(alloc);
+        // dict_insert_entry_ptrs is now a Box, so it will be deallocated when it goes out of scope.
 
         // Initialize all CompDictEntries
+        let freq_table = Self::create_frequency_table(data);
         let mut cur_ofs_addr = max_ofs_ptr;
         let mut cur_dict_entry = dict_entry_ptr;
         let mut cur_freq_tbl_entry = freq_table.as_ptr();
         let mut cur_ofs_insert_ptr = dict_insert_entry_ptrs.as_mut_ptr();
         let max_dict_entry = cur_dict_entry.add(MAX_U16);
 
+        // This loop initializes each CompDictEntry (ies) based on the frequency table.
+        // It sets up the pointers for where the offsets for each 2-byte sequence will be stored.
+        // This also populates `dict_insert_entry_ptrs` (via `cur_ofs_insert_ptr`) setting each
+        // entry to the value of `cur_ofs_addr` (the current offset address).
         while cur_dict_entry < max_dict_entry {
             let num_items = *cur_freq_tbl_entry;
             *cur_ofs_insert_ptr = cur_ofs_addr;
@@ -124,6 +146,13 @@ impl CompDict {
             cur_ofs_insert_ptr = cur_ofs_insert_ptr.add(1);
         }
 
+        // The rest of the function is dedicated to actually populating the dictionary with offsets.
+        // Here we do the following:
+        // - Read Each 2 Byte Sequence
+        // - Use 2 Byte Sequence as Key
+        // - Gets insert location via `dict_insert_entry_ptrs` (**insert_entry_ptr)
+        // - Advance insert location for given key (*insert_entry_ptr)
+
         // Iterate over the data, and add each 2-byte sequence to the dictionary.
         #[cfg(not(target_pointer_width = "64"))]
         {
@@ -137,7 +166,9 @@ impl CompDict {
                 let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
                 // Insert the offset into the dictionary
-                **insert_entry_ptr = data_ptr.sub(data_ptr_start as usize) as MaxOffset; // set offset
+                **insert_entry_ptr = (data_ptr.sub(data_ptr_start as usize) as MaxOffset)
+                    .wrapping_add(offset as MaxOffset);
+
                 *insert_entry_ptr = (*insert_entry_ptr).add(1); // advance to next entry
 
                 data_ptr = data_ptr.add(1);
@@ -159,9 +190,11 @@ impl CompDict {
                     let key = ((chunk >> (shift * 8)) & 0xFFFF) as u16;
                     let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
-                    **insert_entry_ptr = (data.as_ptr().add(data_ofs + shift) as usize
+                    **insert_entry_ptr = ((data.as_ptr().add(data_ofs + shift) as usize
                         - data.as_ptr() as usize)
-                        as MaxOffset;
+                        as MaxOffset)
+                        .wrapping_add(offset as MaxOffset);
+
                     *insert_entry_ptr = (*insert_entry_ptr).add(1);
                 }
 
@@ -172,8 +205,9 @@ impl CompDict {
                 let key = ((chunk >> 56) | next_chunk_byte) as u16;
                 let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
-                **insert_entry_ptr = (data.as_ptr().add(data_ofs + 7) as usize
-                    - data.as_ptr() as usize) as MaxOffset;
+                **insert_entry_ptr = ((data.as_ptr().add(data_ofs + 7) as usize
+                    - data.as_ptr() as usize) as MaxOffset)
+                    .wrapping_add(offset as MaxOffset);
                 *insert_entry_ptr = (*insert_entry_ptr).add(1);
 
                 data_ofs += 8;
@@ -184,16 +218,12 @@ impl CompDict {
                 let key = read_unaligned(data.as_ptr().add(data_ofs) as *const u16);
                 let insert_entry_ptr = dict_insert_entry_ptrs.as_mut_ptr().add(key as usize);
 
-                **insert_entry_ptr =
-                    (data.as_ptr().add(data_ofs) as usize - data.as_ptr() as usize) as MaxOffset;
+                **insert_entry_ptr = ((data.as_ptr().add(data_ofs) as usize
+                    - data.as_ptr() as usize) as MaxOffset)
+                    .wrapping_add(offset as MaxOffset);
                 *insert_entry_ptr = (*insert_entry_ptr).add(1);
                 data_ofs += 1;
             }
-        }
-
-        CompDict {
-            buf: NonNull::new_unchecked(buf as *mut MaxOffset),
-            alloc_length: alloc_size,
         }
     }
 
@@ -335,7 +365,8 @@ mod tests {
     fn can_create_dict() {
         unsafe {
             let data = &[0x41, 0x42, 0x43, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41];
-            let mut comp_dict = CompDict::new(data);
+            let mut comp_dict = CompDict::new(data.len());
+            comp_dict.init(data, 0);
 
             // Assert that the items were correctly inserted.
             assert_eq!(
@@ -359,6 +390,39 @@ mod tests {
             // Access beyond end of sequence
             let result = comp_dict.get_item(0x4141, 5, 99);
             assert_eq!(&[5, 6, 7], result);
+        }
+    }
+
+    #[test]
+    fn can_create_dict_with_offset() {
+        unsafe {
+            let data = &[0x41, 0x42, 0x43, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41];
+            let offset = 1000;
+            let mut comp_dict = CompDict::new(data.len());
+            comp_dict.init(data, offset);
+
+            // Assert that the items were correctly inserted with the offset.
+            assert_eq!(
+                comp_dict.get_dict_mut()[0x4241_u16.to_le() as usize].get_items(),
+                &[1000]
+            );
+            assert_eq!(
+                comp_dict.get_dict_mut()[0x4342_u16.to_le() as usize].get_items(),
+                &[1001]
+            );
+
+            // Ensure we can get a slice with offsets.
+            let result = comp_dict.get_item(0x4141, 1003, 1004);
+            assert_eq!(&[1003, 1004], result);
+
+            // Access the next in sequence, and ensure it was correctly advanced.
+            let result = comp_dict.get_item(0x4141, 1004, 1005);
+            assert_eq!(&[1004, 1005], result);
+            assert_eq!(*comp_dict.get_dict_mut()[0x4141].last_read_item, 1004);
+
+            // Access beyond end of sequence
+            let result = comp_dict.get_item(0x4141, 1005, 1099);
+            assert_eq!(&[1005, 1006, 1007], result);
         }
     }
 }
