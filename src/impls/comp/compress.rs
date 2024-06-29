@@ -1,5 +1,5 @@
-use super::lz77_matcher::Lz77Match;
-use crate::impls::comp::{comp_dict::CompDict, lz77_matcher::lz77_get_longest_match};
+use super::lz77_matcher::{lz77_get_longest_match_fast, lz77_get_longest_match_slow, Lz77Match};
+use crate::impls::comp::comp_dict::CompDict;
 use core::{ptr::write_unaligned, slice};
 
 /// Size of a CompDict window.
@@ -23,9 +23,9 @@ use core::{ptr::write_unaligned, slice};
 /// - 4 * WINDOW_SIZE = 4 * 64K = 256K
 const WINDOW_SIZE: usize = u16::MAX as usize;
 
-const MAX_OFFSET: usize = 0x1FFF;
+pub const MAX_OFFSET: usize = 0x1FFF;
+pub const COPY_MAX_LENGTH: isize = 0x100;
 const SHORT_COPY_MAX_OFFSET: isize = 0x100;
-const COPY_MAX_LENGTH: isize = 0x100;
 const SHORT_COPY_MAX_LEN: usize = 5;
 const SHORT_COPY_MIN_LEN: usize = 2;
 
@@ -76,15 +76,7 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
 
         // Process the current window.
         while source_ofs < window_end {
-            let result = lz77_get_longest_match(
-                &mut dict,
-                source,
-                source_len,
-                source_ofs,
-                MAX_OFFSET,
-                COPY_MAX_LENGTH as usize,
-                true,
-            );
+            let result = lz77_get_longest_match_fast(&mut dict, source, source_ofs);
 
             encode_lz77_match(
                 result,
@@ -106,15 +98,7 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     dict.init(window_slice, window_start);
 
     while source_ofs < source_len.saturating_sub(1) {
-        let result = lz77_get_longest_match(
-            &mut dict,
-            source,
-            source_len,
-            source_ofs,
-            MAX_OFFSET,
-            COPY_MAX_LENGTH as usize,
-            false, // 👈 loop differs here
-        );
+        let result = lz77_get_longest_match_slow(&mut dict, source, source_len, source_ofs);
 
         encode_lz77_match(
             result,
