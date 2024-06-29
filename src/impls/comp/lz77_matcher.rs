@@ -96,6 +96,11 @@ pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
                 }
             }
         } else {
+            match_length = size_of::<usize>();
+
+            // We are usize aligned (assert above) and MAX_LENGTH should be divisible by usize.
+            // Therefore there is no risk of running out of bounds here in the usize matching.
+
             // First 8 bytes match.
             while match_length < P::MAX_LENGTH
                 && read_unaligned(offset_src_ptr.add(match_length) as *const usize)
