@@ -8,6 +8,21 @@ Available Downloads:
 - C Bindings: `C-Library-*`  
 - NuGet (C#): [prs_rs.Net.Sys](https://www.nuget.org/packages/prs_rs.Net.Sys)  
 
+## Version 1.0.4
+
+This version carries the following improvements:
+
+- Compressor 'Dictionary' is now updated in blocks, rather than eating the file up front.
+  - This improves performance for multi-threaded compression, improving L2/L3 cache hits.
+  - Compressor memory requirement reduced to 1.4MB/2.4MB on 32/64-bit.
+    - It is no longer `1.1M/2.1M + (4 * FileSize)`
+
+- Micro-optimizations in compressor sequence matching.
+  - Improved compression speed by ~10% for some edge cases.
+
+- Fixed Edge case where compressing files with `< 256` repeating bytes at the end of a file was excessively slow.
+  - Compressing a 132K empty file now runs at 350MB/s instead of 100MB/s per core (5900X).
+
 ## Complete Changelog
 
 All notable changes to this project will be documented in this file.

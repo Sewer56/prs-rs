@@ -21,3 +21,4 @@ jobs:
           override-starting-version: true
           is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
           release-tag: ${{ github.ref_name }}
+          template: changelog.hbs

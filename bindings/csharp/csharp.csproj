@@ -6,7 +6,7 @@
     <RootNamespace>prs_rs.Net.Sys</RootNamespace>
     <PackageProjectUrl>https://github.com/Sewer56/prs-rs</PackageProjectUrl>
     <Description>A fast PRS decompressor/compressor written in Rust (Raw C# Bindings).</Description>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <Product>prs-rs (C# Bindings)</Product>
     
     <!-- Common Settings -->
