@@ -7,7 +7,7 @@ use core::slice;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
 
 type MaxOffset = u32;
-type FreqCountType = u32;
+type FreqCountType = u16;
 const MAX_U16: usize = 65536;
 const ALLOC_ALIGNMENT: usize = 64; // x86 cache line
 

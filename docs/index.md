@@ -188,8 +188,23 @@ Compress:
 
 - `19`-`350` MiB/s (Average: ~38MiB/s)
 
-I'm not a compression expert, I just used some brain cells and hope to have made a solution that is 
-'good enough'. The compression is also optimal, i.e. it will generate the smallest possible PRS file for the given input data.
+### Memory Usage
+
+Currently as of 1.0.4, the compressor uses a flat amount of memory.
+This is:
+
+- 1.4MB on 32-bit platforms
+- 2.4MB on 64-bit platforms
+
+See `compress.rs` for more details.
+
+### Important Note
+
+I'm not a compression expert, I just used some brain cells, poked around the web a bit,
+and tried to come up with a solution that is 'good enough'.
+
+The compression is also optimal, i.e. it will generate the smallest possible PRS file
+for the given input data.
 
 ## Technical Questions
 

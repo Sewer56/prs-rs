@@ -21,8 +21,12 @@ use core::{ptr::write_unaligned, slice};
 /// - [MaxOffset; file_num_bytes] (offsets), variable size. This buffer stores offsets of all items of 2 byte combinations.
 ///
 /// Which is:
-/// - 12 * 64K = 768K or 1.5M
-/// - 4 * WINDOW_SIZE = 4 * 64K = 256K
+/// - 12/24 (CompDictEntry) * 64K = 768K/1.5M
+/// - 4 (MaxOffset) * WINDOW_SIZE = 4 * 64K = 256K
+///
+/// During init we also use up:
+/// - 4/8 (InsertPointer) * 64K = 256K/512K
+/// - 2 (FreqTableEntry) * 64K = 128K
 const WINDOW_SIZE: usize = u16::MAX as usize;
 
 const MAX_OFFSET: usize = 0x1FFF;
