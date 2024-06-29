@@ -1,12 +1,22 @@
-use crate::impls::comp::compress::COPY_MAX_LENGTH;
-
 use super::comp_dict::CompDict;
-use super::compress::MAX_OFFSET;
 use core::mem::size_of;
 use core::ptr::read_unaligned;
 
+/// This trait specifies parameters for the [`lz77_get_longest_match`] function.
+///
+/// This allows for the compiler to generate different optimized versions of the function,
+/// via the use of monomorphization and constant propagation.
+pub trait Lz77Parameters {
+    /// Maximum offset (from the current position) to search for a match.
+    /// Specified as positive, so 0x1000 means 0x1000 bytes back.
+    const MAX_OFFSET: usize;
+    /// Maximum length of the match.
+    const MAX_LENGTH: usize;
+}
+
 /// Searches back up to 'COPY_MAX_LENGTH' bytes and returns the length of the longest matching
-/// sequence of bytes. This is the fast version that assumes there are enough bytes left.
+/// sequence of bytes. This is the fast version that assumes there are more than 'COPY_MAX_LENGTH'
+/// bytes left.
 ///
 /// # Parameters
 ///
@@ -19,7 +29,7 @@ use core::ptr::read_unaligned;
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
 #[inline(always)]
-pub unsafe fn lz77_get_longest_match_fast(
+pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
     dict: &mut CompDict,
     source_ptr: *const u8,
     source_index: usize,
@@ -30,7 +40,7 @@ pub unsafe fn lz77_get_longest_match_fast(
     };
 
     // Calculate the minimum offset to consider for a match
-    let min_offset = source_index.saturating_sub(MAX_OFFSET);
+    let min_offset = source_index.saturating_sub(P::MAX_OFFSET);
 
     // Read the 2-byte sequence from source at the current index
     let key = read_unaligned(source_ptr.add(source_index) as *const u16);
@@ -44,9 +54,9 @@ pub unsafe fn lz77_get_longest_match_fast(
         let mut match_length = 0;
 
         // Check the next 6 bytes.
-        // We reset to offset 0 because COPY_MAX_LENGTH divides into it, allowing
+        // We reset to offset 0 because MAX_LENGTH divides into it, allowing
         // for faster matching with completely repeated sequences
-        debug_assert!(COPY_MAX_LENGTH as usize % size_of::<usize>() == 0);
+        debug_assert!(P::MAX_LENGTH % size_of::<usize>() == 0);
         let offset_src_ptr = source_ptr.add(match_offset);
         let offset_dst_ptr = source_ptr.add(source_index);
         let initial_match = read_unaligned(offset_src_ptr.add(match_length) as *const usize)
@@ -87,7 +97,7 @@ pub unsafe fn lz77_get_longest_match_fast(
             }
         } else {
             // First 8 bytes match.
-            while match_length < COPY_MAX_LENGTH as usize
+            while match_length < P::MAX_LENGTH
                 && read_unaligned(offset_src_ptr.add(match_length) as *const usize)
                     == read_unaligned(offset_dst_ptr.add(match_length) as *const usize)
             {
@@ -95,7 +105,7 @@ pub unsafe fn lz77_get_longest_match_fast(
             }
 
             // Cleverly unrolled by LLVM as 4 single byte checks.
-            while match_length < COPY_MAX_LENGTH as usize
+            while match_length < P::MAX_LENGTH
                 && *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)
             {
                 match_length += 1;
@@ -107,7 +117,7 @@ pub unsafe fn lz77_get_longest_match_fast(
             best_match.length = match_length;
             best_match.offset = match_offset as isize - source_index as isize;
 
-            if match_length == COPY_MAX_LENGTH as usize {
+            if match_length == P::MAX_LENGTH {
                 break;
             }
         }
@@ -117,7 +127,7 @@ pub unsafe fn lz77_get_longest_match_fast(
 }
 
 /// Searches back up to 'COPY_MAX_LENGTH' bytes and returns the length of the longest matching
-/// sequence of bytes. This is the slow version that checks for bounds.
+/// sequence of bytes. This is the slow version that ensures we don't overrun past the end of file.
 ///
 /// # Parameters
 ///
@@ -130,7 +140,7 @@ pub unsafe fn lz77_get_longest_match_fast(
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
 #[inline(always)]
-pub unsafe fn lz77_get_longest_match_slow(
+pub unsafe fn lz77_get_longest_match_slow<P: Lz77Parameters>(
     dict: &mut CompDict,
     source_ptr: *const u8,
     source_len: usize,
@@ -142,10 +152,13 @@ pub unsafe fn lz77_get_longest_match_slow(
     };
 
     // Calculate the minimum offset to consider for a match
-    let min_offset = source_index.saturating_sub(MAX_OFFSET);
+    let min_offset = source_index.saturating_sub(P::MAX_OFFSET);
 
     // Read the 2-byte sequence from source at the current index
     let key = read_unaligned(source_ptr.add(source_index) as *const u16);
+
+    // Calculate the maximum possible match length
+    let max_match_length = P::MAX_LENGTH.min(source_len - source_index);
 
     // Retrieve possible match offsets from the dictionary
     let offsets = dict.get_item(key, min_offset, source_index.saturating_sub(1));
@@ -156,8 +169,7 @@ pub unsafe fn lz77_get_longest_match_slow(
         let mut match_length = 2;
         let offset_src_ptr = source_ptr.add(match_offset);
         let offset_dst_ptr = source_ptr.add(source_index);
-        while match_length < COPY_MAX_LENGTH as usize
-            && source_index + match_length < source_len
+        while match_length < max_match_length
             && *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)
         {
             match_length += 1;
@@ -168,7 +180,7 @@ pub unsafe fn lz77_get_longest_match_slow(
             best_match.length = match_length;
             best_match.offset = match_offset as isize - source_index as isize;
 
-            if match_length == COPY_MAX_LENGTH as usize {
+            if match_length == max_match_length {
                 break;
             }
         }
@@ -196,8 +208,14 @@ mod tests {
         unsafe { dict.init(data, 0) }
 
         // Longest match for "abc" starting from index 3 should be of length 12
-        let match_result =
-            unsafe { lz77_get_longest_match_slow(&mut dict, data.as_ptr(), data.len(), 3) };
+        let match_result = unsafe {
+            lz77_get_longest_match_slow::<CompressParameters>(
+                &mut dict,
+                data.as_ptr(),
+                data.len(),
+                3,
+            )
+        };
         assert_eq!(match_result.length, 12);
         assert_eq!(match_result.offset, -3);
     }
@@ -209,8 +227,14 @@ mod tests {
         unsafe { dict.init(data, 0) }
 
         // No repetition, so no match
-        let match_result =
-            unsafe { lz77_get_longest_match_slow(&mut dict, data.as_ptr(), data.len(), 2) };
+        let match_result = unsafe {
+            lz77_get_longest_match_slow::<CompressParameters>(
+                &mut dict,
+                data.as_ptr(),
+                data.len(),
+                2,
+            )
+        };
         assert_eq!(match_result.length, 0);
     }
 
@@ -221,8 +245,14 @@ mod tests {
         unsafe { dict.init(data, 0) }
 
         // Multiple "ab" patterns, longest match from index 2 should be length 8
-        let match_result =
-            unsafe { lz77_get_longest_match_slow(&mut dict, data.as_ptr(), data.len(), 2) };
+        let match_result = unsafe {
+            lz77_get_longest_match_slow::<CompressParameters>(
+                &mut dict,
+                data.as_ptr(),
+                data.len(),
+                2,
+            )
+        };
         assert_eq!(match_result.length, 8);
         assert_eq!(match_result.offset, -2);
     }
@@ -235,27 +265,15 @@ mod tests {
 
         // Testing boundary condition: match at the very end
         let match_result = unsafe {
-            lz77_get_longest_match_slow(&mut dict, data.as_ptr(), data.len(), data.len() - 3)
-        };
-        assert_eq!(match_result.length, 3);
-        assert_eq!(match_result.offset, -2);
-
-        // Testing boundary condition: no match beyond data length
-        // Uncommented due to out of bounds access not present in actual workloads.
-        /*
-        let match_result = unsafe {
-            lz77_get_longest_match(
+            lz77_get_longest_match_slow::<CompressParameters>(
                 &mut dict,
                 data.as_ptr(),
                 data.len(),
-                data.len(),
-                15,
-                15,
-                false,
+                data.len() - 3,
             )
         };
-        assert_eq!(match_result.length, 0);
-        */
+        assert_eq!(match_result.length, 3);
+        assert_eq!(match_result.offset, -2);
     }
 
     #[test]
@@ -266,9 +284,20 @@ mod tests {
 
         // Testing boundary condition: match at the very end, when very end is only pattern
         let match_result = unsafe {
-            lz77_get_longest_match_slow(&mut dict, data.as_ptr(), data.len(), data.len() - 2)
+            lz77_get_longest_match_slow::<CompressParameters>(
+                &mut dict,
+                data.as_ptr(),
+                data.len(),
+                data.len() - 2,
+            )
         };
         assert_eq!(match_result.length, 2);
         assert_eq!(match_result.offset, -2);
+    }
+
+    struct CompressParameters;
+    impl Lz77Parameters for CompressParameters {
+        const MAX_OFFSET: usize = 0x1FFF;
+        const MAX_LENGTH: usize = 256;
     }
 }

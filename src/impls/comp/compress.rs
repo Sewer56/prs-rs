@@ -1,4 +1,6 @@
-use super::lz77_matcher::{lz77_get_longest_match_fast, lz77_get_longest_match_slow, Lz77Match};
+use super::lz77_matcher::{
+    lz77_get_longest_match_fast, lz77_get_longest_match_slow, Lz77Match, Lz77Parameters,
+};
 use crate::impls::comp::comp_dict::CompDict;
 use core::{ptr::write_unaligned, slice};
 
@@ -23,8 +25,8 @@ use core::{ptr::write_unaligned, slice};
 /// - 4 * WINDOW_SIZE = 4 * 64K = 256K
 const WINDOW_SIZE: usize = u16::MAX as usize;
 
-pub const MAX_OFFSET: usize = 0x1FFF;
-pub const COPY_MAX_LENGTH: isize = 0x100;
+const MAX_OFFSET: usize = 0x1FFF;
+const COPY_MAX_LENGTH: isize = 0x100;
 const SHORT_COPY_MAX_OFFSET: isize = 0x100;
 const SHORT_COPY_MAX_LEN: usize = 5;
 const SHORT_COPY_MIN_LEN: usize = 2;
@@ -76,7 +78,8 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
 
         // Process the current window.
         while source_ofs < window_end {
-            let result = lz77_get_longest_match_fast(&mut dict, source, source_ofs);
+            let result =
+                lz77_get_longest_match_fast::<CompressParameters>(&mut dict, source, source_ofs);
 
             encode_lz77_match(
                 result,
@@ -98,7 +101,9 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     dict.init(window_slice, window_start);
 
     while source_ofs < source_len.saturating_sub(1) {
-        let result = lz77_get_longest_match_slow(&mut dict, source, source_len, source_ofs);
+        let result = lz77_get_longest_match_slow::<CompressParameters>(
+            &mut dict, source, source_len, source_ofs,
+        );
 
         encode_lz77_match(
             result,
@@ -298,4 +303,10 @@ unsafe fn append_byte(value: u8, dest: &mut *mut u8) {
 unsafe fn append_u16_le(value: u16, dest: &mut *mut u8) {
     write_unaligned((*dest) as *mut u16, value.to_le());
     *dest = dest.add(2);
+}
+
+struct CompressParameters;
+impl Lz77Parameters for CompressParameters {
+    const MAX_OFFSET: usize = MAX_OFFSET;
+    const MAX_LENGTH: usize = COPY_MAX_LENGTH as usize;
 }
