@@ -28,7 +28,7 @@ pub trait Lz77Parameters {
 /// # Safety
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
-#[inline(always)]
+#[inline(never)]
 pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
     dict: &mut CompDict,
     source_ptr: *const u8,
@@ -51,55 +51,38 @@ pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
         let match_offset = match_offset as usize;
 
         // Determine the length of the match
-        let mut match_length = 0;
+        let mut match_length = 2;
 
-        // Check the next 6 bytes.
-        // We reset to offset 0 because MAX_LENGTH divides into it, allowing
-        // for faster matching with completely repeated sequences
-        debug_assert!(P::MAX_LENGTH % size_of::<usize>() == 0);
+        // Check the next 2 bytes.
         let offset_src_ptr = source_ptr.add(match_offset);
         let offset_dst_ptr = source_ptr.add(source_index);
-        let initial_match = read_unaligned(offset_src_ptr.add(match_length) as *const usize)
-            == read_unaligned(offset_dst_ptr.add(match_length) as *const usize);
+        let initial_match = read_unaligned(offset_src_ptr as *const u32)
+            == read_unaligned(offset_dst_ptr as *const u32);
 
         if !initial_match {
-            match_length = 2;
+            // Length is 2 or 3 bytes.
+            match_length +=
+                (*offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)) as usize;
+        } else {
+            match_length = 4;
 
-            // Length is < 8 bytes. So we don't need to compare COPY_MAX_LENGTH.
+            // We are usize aligned (for perf) and MAX_LENGTH should be divisible by usize.
+            // Therefore there is no risk of running out of bounds here in the usize matching.
+            debug_assert!(P::MAX_LENGTH % size_of::<usize>() == 0);
 
-            // Note: This code is normally inefficient but LLVM optimizes it down to bitshifts
-            // nicely. Normally I'd do this by hand but letting LLVM do it means we get decent
-            // codegen for 32-bit too.
-            if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
-                match_length += 1;
-
-                // 32-bit can match +1 only (up to 3)
-                // 64-bit can match +5, up to 7 ()
-                #[cfg(target_pointer_width = "64")]
+            // Check the next 4 bytes.
+            // On 32-bit this redundant as it's part of the great LLVM unroll below.
+            // But here we need to align.
+            #[cfg(target_pointer_width = "64")]
+            {
+                // On 64-bit systems, ensure we're aligned to 8-byte boundary
+                if match_length < P::MAX_LENGTH
+                    && read_unaligned(offset_src_ptr.add(match_length) as *const u32)
+                        == read_unaligned(offset_dst_ptr.add(match_length) as *const u32)
                 {
-                    if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
-                        match_length += 1;
-                        if *offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length) {
-                            match_length += 1;
-                            if *offset_src_ptr.add(match_length)
-                                == *offset_dst_ptr.add(match_length)
-                            {
-                                match_length += 1;
-                                if *offset_src_ptr.add(match_length)
-                                    == *offset_dst_ptr.add(match_length)
-                                {
-                                    match_length += 1;
-                                }
-                            }
-                        }
-                    }
+                    match_length += 4;
                 }
             }
-        } else {
-            match_length = size_of::<usize>();
-
-            // We are usize aligned (assert above) and MAX_LENGTH should be divisible by usize.
-            // Therefore there is no risk of running out of bounds here in the usize matching.
 
             // First 8 bytes match.
             while match_length < P::MAX_LENGTH
@@ -144,7 +127,7 @@ pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
 /// # Safety
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
-#[inline(always)]
+#[inline(never)]
 pub unsafe fn lz77_get_longest_match_slow<P: Lz77Parameters>(
     dict: &mut CompDict,
     source_ptr: *const u8,
