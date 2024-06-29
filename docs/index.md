@@ -186,9 +186,7 @@ Decompress (Decompress):
 
 Compress:
 
-- `16`-`108` MiB/s (Average: ~30MiB/s)
-
-!!! warning "Compression uses `4*FileSize` amount of RAM"
+- `19`-`350` MiB/s (Average: ~38MiB/s)
 
 I'm not a compression expert, I just used some brain cells and hope to have made a solution that is 
 'good enough'. The compression is also optimal, i.e. it will generate the smallest possible PRS file for the given input data.

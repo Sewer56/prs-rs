@@ -1,10 +1,33 @@
-use super::lz77_matcher::Lz77Match;
-use crate::impls::comp::{comp_dict::CompDict, lz77_matcher::lz77_get_longest_match};
+use super::lz77_matcher::{
+    lz77_get_longest_match_fast, lz77_get_longest_match_slow, Lz77Match, Lz77Parameters,
+};
+use crate::impls::comp::comp_dict::CompDict;
 use core::{ptr::write_unaligned, slice};
 
+/// Size of a CompDict window.
+///
+/// This is the size for the look behind buffer (sized MAX_OFFSET) and the following lookahead buffer
+/// (sized WINDOW_SIZE - MAX_OFFSET)
+///
+/// We process the data in smaller windows, to reduce RAM usage and improve L2 cache hit rate on modern CPUs.
+/// This must be at least `MAX_OFFSET + COPY_MAX_LENGTH`.
+///
+/// This should be set based on available amount of L2 cache.
+///
+/// ----------------
+///
+/// As per CompDict Layout
+/// - [CompDictEntry; MAX_U16] (dict), constant size.
+/// - [MaxOffset; file_num_bytes] (offsets), variable size. This buffer stores offsets of all items of 2 byte combinations.
+///
+/// Which is:
+/// - 12 * 64K = 768K or 1.5M
+/// - 4 * WINDOW_SIZE = 4 * 64K = 256K
+const WINDOW_SIZE: usize = u16::MAX as usize;
+
 const MAX_OFFSET: usize = 0x1FFF;
-const SHORT_COPY_MAX_OFFSET: isize = 0x100;
 const COPY_MAX_LENGTH: isize = 0x100;
+const SHORT_COPY_MAX_OFFSET: isize = 0x100;
 const SHORT_COPY_MAX_LEN: usize = 5;
 const SHORT_COPY_MIN_LEN: usize = 2;
 
@@ -23,12 +46,12 @@ const SHORT_COPY_MIN_LEN: usize = 2;
 /// and the remaining parameters are valid.
 pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usize) -> usize {
     let orig_dest = dest as usize;
-    let mut dict = CompDict::new(slice::from_raw_parts(source, source_len));
 
     // Write first control byte.
     let mut control_byte_ptr = reserve_control_byte(&mut dest);
     let mut control_bit_position = 0;
     let mut source_ofs = 0;
+    let mut dict = CompDict::new(WINDOW_SIZE);
 
     // First byte is always a direct encode, so we can encode it before looping,
     // doing this here saves a branch in lz77_get_longest_match, improving perf.
@@ -44,41 +67,42 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     }
 
     // Loop through all the bytes, as long as there are less than COPY_MAX_LENGTH bytes left.
-    // We elimiate a branch inside lz77_get_longest_match by doing this, saving a bit of perf.
-    while source_ofs < source_len.saturating_sub(COPY_MAX_LENGTH as usize) {
-        // Get longest match.
-        let result = lz77_get_longest_match(
-            &mut dict,
-            source,
-            source_len,
-            source_ofs,
-            MAX_OFFSET,
-            COPY_MAX_LENGTH as usize,
-            true,
-        );
+    // We eliminate a branch inside lz77_get_longest_match by doing this, saving a bit of perf.
+    let fast_processing_end = source_len.saturating_sub(COPY_MAX_LENGTH as usize);
+    while source_ofs < fast_processing_end {
+        let window_start = source_ofs.saturating_sub(MAX_OFFSET);
+        let window_end = (window_start + WINDOW_SIZE).min(fast_processing_end);
+        let window_slice =
+            slice::from_raw_parts(source.add(window_start), window_end - window_start);
+        dict.init(window_slice, window_start);
 
-        encode_lz77_match(
-            result,
-            &mut dest,
-            &mut control_bit_position,
-            &mut control_byte_ptr,
-            &mut source_ofs,
-            source,
-        );
+        // Process the current window.
+        while source_ofs < window_end {
+            let result =
+                lz77_get_longest_match_fast::<CompressParameters>(&mut dict, source, source_ofs);
+
+            encode_lz77_match(
+                result,
+                &mut dest,
+                &mut control_bit_position,
+                &mut control_byte_ptr,
+                &mut source_ofs,
+                source,
+            );
+        }
     }
 
     // Handle the remaining bytes.
     // We sub 1 because `lz77_get_longest_match` reads the next 2 bytes.
     // If our file happens to be 1 byte from the end, we can't read 2 bytes.
+    let window_start = source_ofs.saturating_sub(MAX_OFFSET);
+    let window_end = (window_start + WINDOW_SIZE).min(source_len);
+    let window_slice = slice::from_raw_parts(source.add(window_start), window_end - window_start);
+    dict.init(window_slice, window_start);
+
     while source_ofs < source_len.saturating_sub(1) {
-        let result = lz77_get_longest_match(
-            &mut dict,
-            source,
-            source_len,
-            source_ofs,
-            MAX_OFFSET,
-            COPY_MAX_LENGTH as usize,
-            false, // 👈 loop differs here
+        let result = lz77_get_longest_match_slow::<CompressParameters>(
+            &mut dict, source, source_len, source_ofs,
         );
 
         encode_lz77_match(
@@ -279,4 +303,10 @@ unsafe fn append_byte(value: u8, dest: &mut *mut u8) {
 unsafe fn append_u16_le(value: u16, dest: &mut *mut u8) {
     write_unaligned((*dest) as *mut u16, value.to_le());
     *dest = dest.add(2);
+}
+
+struct CompressParameters;
+impl Lz77Parameters for CompressParameters {
+    const MAX_OFFSET: usize = MAX_OFFSET;
+    const MAX_LENGTH: usize = COPY_MAX_LENGTH as usize;
 }

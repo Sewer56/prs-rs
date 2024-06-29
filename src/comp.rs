@@ -7,7 +7,8 @@ use crate::{
 #[doc(hidden)]
 pub fn create_comp_dict(data: &[u8]) -> u32 {
     unsafe {
-        let mut dict = CompDict::new(data);
+        let mut dict = CompDict::new(data.len());
+        dict.init(data, 0);
         dict.get_item(0, 0, u32::MAX as usize)[0]
     }
 }
