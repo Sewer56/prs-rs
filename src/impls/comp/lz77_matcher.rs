@@ -28,7 +28,7 @@ pub trait Lz77Parameters {
 /// # Safety
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
-#[inline(never)]
+#[inline(always)]
 pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
     dict: &mut CompDict,
     source_ptr: *const u8,
@@ -51,7 +51,7 @@ pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
         let match_offset = match_offset as usize;
 
         // Determine the length of the match
-        let mut match_length = 2;
+        let mut match_length = 0;
 
         // Check the next 2 bytes.
         let offset_src_ptr = source_ptr.add(match_offset);
@@ -61,28 +61,13 @@ pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
 
         if !initial_match {
             // Length is 2 or 3 bytes.
+            match_length = 2;
             match_length +=
                 (*offset_src_ptr.add(match_length) == *offset_dst_ptr.add(match_length)) as usize;
         } else {
-            match_length = 4;
-
             // We are usize aligned (for perf) and MAX_LENGTH should be divisible by usize.
             // Therefore there is no risk of running out of bounds here in the usize matching.
             debug_assert!(P::MAX_LENGTH % size_of::<usize>() == 0);
-
-            // Check the next 4 bytes.
-            // On 32-bit this redundant as it's part of the great LLVM unroll below.
-            // But here we need to align.
-            #[cfg(target_pointer_width = "64")]
-            {
-                // On 64-bit systems, ensure we're aligned to 8-byte boundary
-                if match_length < P::MAX_LENGTH
-                    && read_unaligned(offset_src_ptr.add(match_length) as *const u32)
-                        == read_unaligned(offset_dst_ptr.add(match_length) as *const u32)
-                {
-                    match_length += 4;
-                }
-            }
 
             // First 8 bytes match.
             while match_length < P::MAX_LENGTH
@@ -127,7 +112,7 @@ pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
 /// # Safety
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
-#[inline(never)]
+#[inline(always)]
 pub unsafe fn lz77_get_longest_match_slow<P: Lz77Parameters>(
     dict: &mut CompDict,
     source_ptr: *const u8,
