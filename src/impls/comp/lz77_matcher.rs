@@ -1,4 +1,5 @@
 use super::comp_dict::CompDict;
+use core::alloc::Allocator;
 use core::mem::size_of;
 use core::ptr::read_unaligned;
 
@@ -29,8 +30,12 @@ pub trait Lz77Parameters {
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
 #[inline(never)] // faster on x86_64
-pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
-    dict: &mut CompDict,
+pub unsafe fn lz77_get_longest_match_fast<
+    P: Lz77Parameters,
+    L: Allocator + Copy,
+    S: Allocator + Copy,
+>(
+    dict: &mut CompDict<L, S>,
     source_ptr: *const u8,
     source_index: usize,
 ) -> Lz77Match {
@@ -113,8 +118,12 @@ pub unsafe fn lz77_get_longest_match_fast<P: Lz77Parameters>(
 ///
 /// Should be safe provided `dict` is initialized with `source` and composed of valid data.
 #[inline(never)] // faster on x86_64
-pub unsafe fn lz77_get_longest_match_slow<P: Lz77Parameters>(
-    dict: &mut CompDict,
+pub unsafe fn lz77_get_longest_match_slow<
+    P: Lz77Parameters,
+    L: Allocator + Copy,
+    S: Allocator + Copy,
+>(
+    dict: &mut CompDict<L, S>,
     source_ptr: *const u8,
     source_len: usize,
     source_index: usize,
@@ -172,6 +181,8 @@ pub struct Lz77Match {
 
 #[cfg(test)]
 mod tests {
+    use std::alloc::Global;
+
     use super::*;
 
     #[test]
@@ -182,7 +193,7 @@ mod tests {
 
         // Longest match for "abc" starting from index 3 should be of length 12
         let match_result = unsafe {
-            lz77_get_longest_match_slow::<CompressParameters>(
+            lz77_get_longest_match_slow::<CompressParameters, Global, Global>(
                 &mut dict,
                 data.as_ptr(),
                 data.len(),
@@ -201,7 +212,7 @@ mod tests {
 
         // No repetition, so no match
         let match_result = unsafe {
-            lz77_get_longest_match_slow::<CompressParameters>(
+            lz77_get_longest_match_slow::<CompressParameters, Global, Global>(
                 &mut dict,
                 data.as_ptr(),
                 data.len(),
@@ -219,7 +230,7 @@ mod tests {
 
         // Multiple "ab" patterns, longest match from index 2 should be length 8
         let match_result = unsafe {
-            lz77_get_longest_match_slow::<CompressParameters>(
+            lz77_get_longest_match_slow::<CompressParameters, Global, Global>(
                 &mut dict,
                 data.as_ptr(),
                 data.len(),
@@ -238,7 +249,7 @@ mod tests {
 
         // Testing boundary condition: match at the very end
         let match_result = unsafe {
-            lz77_get_longest_match_slow::<CompressParameters>(
+            lz77_get_longest_match_slow::<CompressParameters, Global, Global>(
                 &mut dict,
                 data.as_ptr(),
                 data.len(),
@@ -257,7 +268,7 @@ mod tests {
 
         // Testing boundary condition: match at the very end, when very end is only pattern
         let match_result = unsafe {
-            lz77_get_longest_match_slow::<CompressParameters>(
+            lz77_get_longest_match_slow::<CompressParameters, Global, Global>(
                 &mut dict,
                 data.as_ptr(),
                 data.len(),

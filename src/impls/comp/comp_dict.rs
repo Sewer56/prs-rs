@@ -1,10 +1,10 @@
 extern crate alloc;
-use alloc::alloc::{alloc, dealloc};
 use alloc::boxed::Box;
-use alloc::vec;
+use core::alloc::Allocator;
 use core::ptr::{write, NonNull};
 use core::slice;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
+use std::alloc::Global;
 
 pub(crate) type MaxOffset = u32;
 type FreqCountType = u32;
@@ -27,21 +27,23 @@ const ENTRY_SECTION_LEN: usize = size_of::<[CompDictEntry; MAX_U16]>();
 /// When the compressor is looking for longest match at given address, it will read the 2 bytes at the
 /// address and use that as key [`CompDict::get_item`]. Then the offsets inside the returned entry
 /// will be used to greatly speed up search.
-pub struct CompDict {
+pub struct CompDict<L: Allocator + Copy = Global, S: Allocator + Copy = Global> {
     /// Our memory allocation is here.
     /// Layout:
     /// - [CompDictEntry; MAX_U16] (dict), constant size
     /// - [MaxOffset; data_len_num_bytes] (offsets), variable size. This buffer stores offsets of all items of 2 byte combinations.
     buf: NonNull<u8>,
     alloc_length: usize, // length of data that 'dict' and 'offsets' were made with
+    long_lived_allocator: L,
+    short_lived_allocator: S,
 }
 
-impl Drop for CompDict {
+impl<L: Allocator + Copy, S: Allocator + Copy> Drop for CompDict<L, S> {
     fn drop(&mut self) {
         unsafe {
             // dealloc buffer and box
             let layout = Layout::from_size_align_unchecked(self.alloc_length, ALLOC_ALIGNMENT);
-            dealloc(self.buf.as_ptr(), layout);
+            self.long_lived_allocator.deallocate(self.buf, layout);
         }
     }
 }
@@ -67,24 +69,29 @@ pub struct CompDictEntry {
     last_item: *mut MaxOffset,
 }
 
-impl CompDict {
+impl<L: Allocator + Copy, S: Allocator + Copy> CompDict<L, S> {
     /// Create a new [`CompDict`] without initializing it.
     ///
     /// # Parameters
     ///
     /// - `data_len`: The length of the data that will be used to initialize the dictionary.
-    pub fn new(data_len: usize) -> Self {
+    /// - `long_lived_allocator`: The allocator to use for long-lived memory allocation.
+    /// - `short_lived_allocator`: The allocator to use for short-lived memory allocation.
+    #[inline(always)]
+    pub fn new_in(data_len: usize, long_lived_allocator: L, short_lived_allocator: S) -> Self {
         unsafe {
             // constant
             let offset_section_len = size_of::<MaxOffset>() * data_len;
             let alloc_size = ENTRY_SECTION_LEN + DICTIONARY_PADDING + offset_section_len;
 
             let layout = Layout::from_size_align_unchecked(alloc_size, ALLOC_ALIGNMENT);
-            let buf = alloc(layout);
+            let buf = long_lived_allocator.allocate(layout).unwrap();
 
             CompDict {
-                buf: NonNull::new_unchecked(buf),
+                buf: NonNull::new_unchecked(buf.as_ptr() as *mut u8),
                 alloc_length: alloc_size,
+                long_lived_allocator,
+                short_lived_allocator,
             }
         }
     }
@@ -100,6 +107,7 @@ impl CompDict {
     ///
     /// This function is unsafe as it operates on raw pointers and assumes that
     /// the `CompDict` has been properly allocated with enough space for `data`.
+    #[inline(always)]
     pub unsafe fn init(&mut self, data: &[u8], offset: usize) {
         let dict_entry_ptr = self.buf.as_ptr() as *mut CompDictEntry;
         let max_ofs_ptr =
@@ -110,14 +118,19 @@ impl CompDict {
         // We will use this later to populate the dictionary.
         // The `dict_insert_entry_ptrs` is a buffer which stores the pointer to the current location
         // where we need to insert the offset for a given 2 byte sequence (hence length MAX_U16).
-        let alloc =
-            alloc(Layout::new::<[*mut MaxOffset; MAX_U16]>()) as *mut [*mut MaxOffset; MAX_U16];
+        let alloc = self
+            .short_lived_allocator
+            .allocate(Layout::new::<[*mut MaxOffset; MAX_U16]>())
+            .unwrap()
+            .as_ptr() as *mut [*mut MaxOffset; MAX_U16];
 
-        let mut dict_insert_entry_ptrs = Box::<[*mut MaxOffset; MAX_U16]>::from_raw(alloc);
+        let mut dict_insert_entry_ptrs =
+            Box::<[*mut MaxOffset; MAX_U16], S>::from_raw_in(alloc, self.short_lived_allocator);
+
         // dict_insert_entry_ptrs is now a Box, so it will be deallocated when it goes out of scope.
 
         // Initialize all CompDictEntries
-        let freq_table = Self::create_frequency_table(data);
+        let freq_table = self.create_frequency_table(data);
         let mut cur_ofs_addr = max_ofs_ptr;
         let mut cur_dict_entry = dict_entry_ptr;
         let mut cur_freq_tbl_entry = freq_table.as_ptr();
@@ -232,10 +245,12 @@ impl CompDict {
     ///
     /// # Parameters
     /// - `data`: The data to create the frequency table from.
-    pub(crate) unsafe fn create_frequency_table(data: &[u8]) -> Box<[FreqCountType; MAX_U16]> {
+    pub(crate) unsafe fn create_frequency_table(&self, data: &[u8]) -> Box<[FreqCountType], S> {
         // This actually has no overhead.
-        let mut result: Box<[FreqCountType; MAX_U16]> =
-            vec![0; MAX_U16].into_boxed_slice().try_into().unwrap();
+
+        let result =
+            Box::<[FreqCountType], S>::new_zeroed_slice_in(MAX_U16, self.short_lived_allocator);
+        let mut result = result.assume_init();
 
         #[cfg(not(target_pointer_width = "64"))]
         {
@@ -287,14 +302,6 @@ impl CompDict {
         }
     }
 
-    /// Retrieves the dictionary entries section of this [`CompDict`].
-    pub fn get_dict_mut(&mut self) -> &mut [CompDictEntry; MAX_U16] {
-        unsafe {
-            let first_item = self.buf.as_ptr() as *mut CompDictEntry;
-            &mut *(first_item as *mut [CompDictEntry; MAX_U16])
-        }
-    }
-
     /// Returns a slice of offsets for the given key which are greater than or equal to `min_ofs`
     /// and less than or equal to `max_ofs`.
     ///
@@ -307,6 +314,7 @@ impl CompDict {
     /// # Safety
     ///
     /// This function is unsafe as it operates on raw pointers.
+    #[inline(always)]
     pub(crate) unsafe fn get_item(
         &mut self,
         key: u16,
@@ -338,6 +346,25 @@ impl CompDict {
             cur_last_read_item,
             end.offset_from(cur_last_read_item) as usize,
         )
+    }
+
+    /// Retrieves the dictionary entries section of this [`CompDict`].
+    pub fn get_dict_mut(&mut self) -> &mut [CompDictEntry; MAX_U16] {
+        unsafe {
+            let first_item = self.buf.as_ptr() as *mut CompDictEntry;
+            &mut *(first_item as *mut [CompDictEntry; MAX_U16])
+        }
+    }
+}
+
+impl CompDict {
+    /// Create a new [`CompDict`] without initializing it.
+    ///
+    /// # Parameters
+    ///
+    /// - `data_len`: The length of the data that will be used to initialize the dictionary.
+    pub fn new(data_len: usize) -> Self {
+        Self::new_in(data_len, Global, Global)
     }
 }
 

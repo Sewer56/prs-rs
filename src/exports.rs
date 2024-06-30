@@ -1,6 +1,7 @@
 use crate::impls::comp::compress;
 use crate::impls::decomp::estimate::prs_calculate_decompressed_size_impl;
 use core::ffi::c_uchar;
+use std::alloc::Global;
 
 /// Compresses the given data in `source`, placing it in `destimation`.
 ///
@@ -25,7 +26,7 @@ pub unsafe extern "C" fn prs_compress(
     dest: *mut c_uchar,
     src_len: usize,
 ) -> usize {
-    compress::prs_compress(src, dest, src_len)
+    compress::prs_compress::<Global, Global>(src, dest, src_len, Global, Global)
 }
 
 /// Decodes the maximum possible compressed size after compressing a file with provided
