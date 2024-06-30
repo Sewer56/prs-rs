@@ -1,11 +1,14 @@
 use crate::{
-    impls::comp::{comp_dict::CompDict, compress::prs_compress},
+    impls::comp::{
+        comp_dict::{CompDict, MaxOffset},
+        compress::prs_compress,
+    },
     MutablePointerSrc,
 };
 
 /// BENCHMARK ONLY, DO NOT USE
 #[doc(hidden)]
-pub fn create_comp_dict(data: &[u8]) -> u32 {
+pub fn create_comp_dict(data: &[u8]) -> MaxOffset {
     unsafe {
         let mut dict = CompDict::new(data.len());
         dict.init(data, 0);
