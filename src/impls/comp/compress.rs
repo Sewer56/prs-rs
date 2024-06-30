@@ -52,6 +52,7 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     let orig_dest = dest as usize;
 
     // Write first control byte.
+    let mut last_init_covered_all = false;
     let mut control_byte_ptr = reserve_control_byte(&mut dest);
     let mut control_bit_position = 0;
     let mut source_ofs = 0;
@@ -75,13 +76,19 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     let fast_processing_end = source_len.saturating_sub(COPY_MAX_LENGTH as usize);
     while source_ofs < fast_processing_end {
         let window_start = source_ofs.saturating_sub(MAX_OFFSET);
-        let window_end = (window_start + WINDOW_SIZE).min(fast_processing_end);
+        let window_end = window_start + WINDOW_SIZE;
+        let window_end = if window_end >= source_len {
+            last_init_covered_all = true;
+            source_len
+        } else {
+            window_end
+        };
         let window_slice =
             slice::from_raw_parts(source.add(window_start), window_end - window_start);
         dict.init(window_slice, window_start);
 
         // Process the current window.
-        while source_ofs < window_end {
+        while source_ofs < window_end.min(fast_processing_end) {
             let result =
                 lz77_get_longest_match_fast::<CompressParameters>(&mut dict, source, source_ofs);
 
@@ -99,10 +106,13 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     // Handle the remaining bytes.
     // We sub 1 because `lz77_get_longest_match` reads the next 2 bytes.
     // If our file happens to be 1 byte from the end, we can't read 2 bytes.
-    let window_start = source_ofs.saturating_sub(MAX_OFFSET);
-    let window_end = (window_start + WINDOW_SIZE).min(source_len);
-    let window_slice = slice::from_raw_parts(source.add(window_start), window_end - window_start);
-    dict.init(window_slice, window_start);
+    if !last_init_covered_all {
+        // Only reinitialize the dictionary if we haven't already covered the entire file
+        let window_start = source_ofs.saturating_sub(MAX_OFFSET);
+        let window_slice =
+            slice::from_raw_parts(source.add(window_start), source_len - window_start);
+        dict.init(window_slice, window_start);
+    }
 
     while source_ofs < source_len.saturating_sub(1) {
         let result = lz77_get_longest_match_slow::<CompressParameters>(
