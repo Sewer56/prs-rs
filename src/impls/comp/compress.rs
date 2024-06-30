@@ -2,7 +2,7 @@ use super::lz77_matcher::{
     lz77_get_longest_match_fast, lz77_get_longest_match_slow, Lz77Match, Lz77Parameters,
 };
 use crate::impls::comp::comp_dict::CompDict;
-use core::{ptr::write_unaligned, slice};
+use core::{alloc::Allocator, ptr::write_unaligned, slice};
 
 /// Size of a CompDict window.
 ///
@@ -40,6 +40,8 @@ const SHORT_COPY_MIN_LEN: usize = 2;
 /// - `source`: A pointer to the decompressed data.
 /// - `destination`: A pointer to where to put the compressed data.
 /// - `source_len`: Length of the compressed data.
+/// - `long_lived_allocator`: The allocator to use for long-lived memory allocation.
+/// - `short_lived_allocator`: The allocator to use for short-lived memory allocation.
 ///
 /// # Returns
 /// Number of bytes written to `destination`.
@@ -48,7 +50,13 @@ const SHORT_COPY_MIN_LEN: usize = 2;
 ///
 /// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`])
 /// and the remaining parameters are valid.
-pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usize) -> usize {
+pub unsafe fn prs_compress<L: Allocator + Copy, S: Allocator + Copy>(
+    source: *const u8,
+    mut dest: *mut u8,
+    source_len: usize,
+    long_lived_allocator: L,
+    short_lived_allocator: S,
+) -> usize {
     let orig_dest = dest as usize;
 
     // Write first control byte.
@@ -56,7 +64,7 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     let mut control_byte_ptr = reserve_control_byte(&mut dest);
     let mut control_bit_position = 0;
     let mut source_ofs = 0;
-    let mut dict = CompDict::new(WINDOW_SIZE);
+    let mut dict = CompDict::new_in(WINDOW_SIZE, long_lived_allocator, short_lived_allocator);
 
     // First byte is always a direct encode, so we can encode it before looping,
     // doing this here saves a branch in lz77_get_longest_match, improving perf.
@@ -89,8 +97,9 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
 
         // Process the current window.
         while source_ofs < window_end.min(fast_processing_end) {
-            let result =
-                lz77_get_longest_match_fast::<CompressParameters>(&mut dict, source, source_ofs);
+            let result = lz77_get_longest_match_fast::<CompressParameters, L, S>(
+                &mut dict, source, source_ofs,
+            );
 
             encode_lz77_match(
                 result,
@@ -115,7 +124,7 @@ pub unsafe fn prs_compress(source: *const u8, mut dest: *mut u8, source_len: usi
     }
 
     while source_ofs < source_len.saturating_sub(1) {
-        let result = lz77_get_longest_match_slow::<CompressParameters>(
+        let result = lz77_get_longest_match_slow::<CompressParameters, L, S>(
             &mut dict, source, source_len, source_ofs,
         );
 
