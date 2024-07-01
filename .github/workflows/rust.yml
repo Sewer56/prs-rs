@@ -84,7 +84,7 @@ jobs:
         run: |
           rustup target add ${{ matrix.target }}
           cargo install cargo-semver-checks --locked
-          cargo semver-checks
+          cargo semver-checks --target ${{ matrix.target }} --features "c-exports"
 
   build-c-headers:
     runs-on: ubuntu-latest
