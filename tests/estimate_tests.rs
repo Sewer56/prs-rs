@@ -24,7 +24,7 @@ fn can_estimate_file(#[case] file_name: &str) {
 #[case::model("Model.bin")]
 #[case::layout("ObjectLayout.bin")]
 #[case::worstcase("WorstCase.bin")]
-fn prs_calculate_max_decompressed_size_is_sufficient(#[case] file_name: &str) {
+fn prs_calculate_max_compressed_size_is_sufficient(#[case] file_name: &str) {
     let compressed = load_sample_file(get_compressed_file_path(file_name));
     let uncompressed = load_sample_file(get_uncompressed_file_path(file_name));
     assert_le!(

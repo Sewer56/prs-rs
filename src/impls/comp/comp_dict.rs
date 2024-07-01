@@ -50,8 +50,8 @@ impl<L: Allocator + Copy, S: Allocator + Copy> Drop for CompDict<L, S> {
 
 /// An entry in [Compression Dictionary][`CompDict`].
 ///
-/// This has pointer to current 'last min offset' [`CompDictEntry::last_read_item`] in [`CompDict::offsets`] allocation,
-/// and pointer to last offset for the current 2 byte key.
+/// This has pointer to current 'last min offset' [`CompDictEntry::last_read_item`] in [`CompDict::buf`]
+/// allocation, and pointer to last offset for the current 2 byte key.
 ///
 /// Last min offset [`CompDictEntry::last_read_item`] is advanced as items are sequentially read,
 /// i.e. when [`CompDict::get_item`] is called. This offset corresponds to the first item which had
@@ -60,12 +60,13 @@ impl<L: Allocator + Copy, S: Allocator + Copy> Drop for CompDict<L, S> {
 /// When compressing, this means we can find next matching offset in LZ77 search window
 /// in (effectively) O(1) time.
 #[derive(Clone)]
+#[allow(rustdoc::private_intra_doc_links)]
 pub struct CompDictEntry {
     /// Address of the last minimum offset from previous call to [`CompDict::get_item`].
     last_read_item: *mut MaxOffset,
     /// Address of the last maximum offset from previous call to [`CompDict::get_item`].
     last_read_item_max: *mut MaxOffset,
-    /// Item after last item within the [`CompDict::offsets`] allocation belonging to this entry.
+    /// Item after last item within the offsets section of the [`CompDict::buf`].
     last_item: *mut MaxOffset,
 }
 
@@ -315,12 +316,7 @@ impl<L: Allocator + Copy, S: Allocator + Copy> CompDict<L, S> {
     ///
     /// This function is unsafe as it operates on raw pointers.
     #[inline(always)]
-    pub(crate) unsafe fn get_item(
-        &mut self,
-        key: u16,
-        min_ofs: usize,
-        max_ofs: usize,
-    ) -> &[MaxOffset] {
+    pub unsafe fn get_item(&mut self, key: u16, min_ofs: usize, max_ofs: usize) -> &[MaxOffset] {
         // Ensure that the key is within the bounds of the dictionary.
         debug_assert!(key as usize <= MAX_U16, "Key is out of range!");
 
