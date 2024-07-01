@@ -82,13 +82,12 @@ jobs:
       - name: Run cargo-semver-checks
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
         run: |
-          rustup target add ${{ matrix.target }}
-          cargo install cargo-semver-checks --locked
-          cargo semver-checks --target ${{ matrix.target }} --features "c-exports"
+          cargo +nightly install cargo-semver-checks
+          cargo +nightly semver-checks --target ${{ matrix.target }} --features "c-exports"
 
       - name: Build documentation
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
-        run: cargo doc --no-deps --target ${{ matrix.target }} --features "c-exports"
+        run: cargo +nightly doc --no-deps --target ${{ matrix.target }} --features "c-exports"
 
   build-c-headers:
     runs-on: ubuntu-latest
