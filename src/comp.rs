@@ -33,7 +33,7 @@ pub fn create_comp_dict(data: &[u8]) -> MaxOffset {
 ///
 /// # Safety
 ///
-/// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`])
+/// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_compressed_size`])
 /// and the remaining parameters are valid.
 pub unsafe fn prs_compress_unsafe<T: MutablePointerSrc>(
     src: *const u8,
@@ -60,7 +60,7 @@ pub unsafe fn prs_compress_unsafe<T: MutablePointerSrc>(
 ///
 /// # Safety
 ///
-/// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`])
+/// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_compressed_size`])
 /// and the remaining parameters are valid.
 pub unsafe fn prs_compress_unsafe_with_allocator<
     T: MutablePointerSrc,

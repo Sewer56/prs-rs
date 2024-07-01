@@ -40,10 +40,10 @@ pub unsafe fn prs_calculate_decompressed_size<S: ReadOnlyPointerSrc>(src: S) -> 
 /// The length of the decompressed data at `destination` should be sufficient to store the decompressed data.
 ///
 /// If you know the length of the compressed data (i.e. amount of bytes until end of compressed data),
-/// call [`crate::util::prs_calculate_max_decompressed_size`] to get the length of the decompressed data
+/// call [`crate::util::prs_calculate_max_compressed_size`] to get the length of the decompressed data
 /// buffer.
 ///
-/// If you are unsure of the length, you use the [`crate::estimate::prs_calculate_decompressed_size`]
+/// If you are unsure of the length, you use the [`crate::decomp::prs_calculate_decompressed_size`]
 /// function to determine the length of the decompressed data (at expense of some additional overhead).
 ///
 /// # Safety

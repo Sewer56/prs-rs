@@ -48,7 +48,7 @@ const SHORT_COPY_MIN_LEN: usize = 2;
 ///
 /// # Safety
 ///
-/// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`])
+/// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_compressed_size`])
 /// and the remaining parameters are valid.
 pub unsafe fn prs_compress<L: Allocator + Copy, S: Allocator + Copy>(
     source: *const u8,

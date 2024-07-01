@@ -3,7 +3,8 @@ use core::alloc::Allocator;
 use core::mem::size_of;
 use core::ptr::read_unaligned;
 
-/// This trait specifies parameters for the [`lz77_get_longest_match`] function.
+/// This trait specifies constant parameters for the [`lz77_get_longest_match_fast`]
+/// and [`lz77_get_longest_match_slow`] functions.
 ///
 /// This allows for the compiler to generate different optimized versions of the function,
 /// via the use of monomorphization and constant propagation.
