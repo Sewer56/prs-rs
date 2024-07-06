@@ -1,28 +1,27 @@
-{{{{raw}}}}
 # About this Release
 
 Initial Release of the Rust rewrite of dlang-prs.
 
 Available Downloads:
 
-- Command Line (CLI Program): `prs-rs-cli`  
-- C Bindings: `C-Library-*`  
-- NuGet (C#): [prs_rs.Net.Sys](https://www.nuget.org/packages/prs_rs.Net.Sys)  
+- Command Line (CLI Program): `prs-rs-cli`
+- C Bindings: `C-Library-*`
+- NuGet (C#): [prs_rs.Net.Sys](https://www.nuget.org/packages/prs_rs.Net.Sys)
 
 ## Version 1.0.5
 
 This version carries the following improvements:
 
 - Compressor 'Dictionary' will be reused (if possible) when compressing last block.
-  - Improves performance by ~1.5% on 132KB files.
+  * Improves performance by ~1.5% on 132KB files.
 
 - Added Support for Custom Memory Allocators (Rust API Only)
-  - This allows you to split up the short and long lived memory allocations.
-  - Potentially useful if compressing in real time.
+  * This allows you to split up the short and long lived memory allocations.
+  * Potentially useful if compressing in real time.
 
 - Fixed regression where long sequences of repeated bytes compressed slower than they should.
-  - This happened because zero extending bytes (`movzx`) was slower than reading a pure `u32` in x86.
-  - Improves speed from 200MB to 400MB/s on a file of pure `00`s.
+  * This happened because zero extending bytes (`movzx`) was slower than reading a pure `u32` in x86.
+  * Improves speed from 200MB to 400MB/s on a file of pure `00`s.
 
 ## Complete Changelog
 
@@ -30,7 +29,6 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-{{{{/raw}}}}
 
 ## Complete Changes
 
