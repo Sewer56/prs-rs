@@ -46,7 +46,13 @@ These configurations are in the `.vscode` folder; and the tasks can be ran via `
 
 #### Test Coverage
 
-To run Coverage, run task (`Ctrl+Shift+P -> Run Task`), you should see: 
+First install or update `tarpaulin`:
+
+```bash
+cargo install cargo-tarpaulin
+```
+
+To run Coverage, run task (`Ctrl+Shift+P -> Run Task`), you should see something similar to: 
 
 | Task                   | Description                                                                |
 | ---------------------- | -------------------------------------------------------------------------- |
