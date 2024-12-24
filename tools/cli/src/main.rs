@@ -1,4 +1,3 @@
-#![feature(new_uninit)]
 #[macro_use]
 mod macros;
 mod options;
