@@ -17,7 +17,7 @@ use core::ffi::c_uchar;
 ///
 /// # Safety
 ///
-/// It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`])
+/// It's safe as long as `dest` has sufficient length (max length: [`prs_calculate_max_compressed_size`])
 /// and the remaining parameters are valid.
 #[no_mangle]
 #[inline(never)]
@@ -93,10 +93,10 @@ pub unsafe extern "C" fn prs_calculate_decompressed_size(src: *const c_uchar) ->
 /// The length of the decompressed data at `destination` should be sufficient to store the decompressed data.
 ///
 /// If you know the length of the compressed data (i.e. amount of bytes until end of compressed data),
-/// call [`crate::util::prs_calculate_max_decompressed_size`] to get the length of the decompressed data
+/// call [`prs_calculate_max_compressed_size`] to get the length of the decompressed data
 /// buffer.
 ///
-/// If you are unsure of the length, you use the [`crate::estimate::prs_calculate_decompressed_size`]
+/// If you are unsure of the length, you use the [`prs_calculate_decompressed_size`]
 /// function to determine the length of the decompressed data (at expense of some additional overhead).
 ///
 /// # Safety

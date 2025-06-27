@@ -31,7 +31,7 @@ namespace prs_rs.Net.Sys
         ///
         ///  # Safety
         ///
-        ///  It's safe as long as `dest` has sufficient length (max length: [`crate::util::prs_calculate_max_decompressed_size`])
+        ///  It's safe as long as `dest` has sufficient length (max length: [`prs_calculate_max_compressed_size`])
         ///  and the remaining parameters are valid.
         /// </summary>
         [DllImport(__DllName, EntryPoint = "prs_compress", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
@@ -100,10 +100,10 @@ namespace prs_rs.Net.Sys
         ///  The length of the decompressed data at `destination` should be sufficient to store the decompressed data.
         ///
         ///  If you know the length of the compressed data (i.e. amount of bytes until end of compressed data),
-        ///  call [`crate::util::prs_calculate_max_decompressed_size`] to get the length of the decompressed data
+        ///  call [`prs_calculate_max_compressed_size`] to get the length of the decompressed data
         ///  buffer.
         ///
-        ///  If you are unsure of the length, you use the [`crate::estimate::prs_calculate_decompressed_size`]
+        ///  If you are unsure of the length, you use the [`prs_calculate_decompressed_size`]
         ///  function to determine the length of the decompressed data (at expense of some additional overhead).
         ///
         ///  # Safety
