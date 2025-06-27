@@ -1,10 +1,10 @@
 use crate::util::{get_compressed_file_path, get_uncompressed_file_path, load_sample_file};
-use criterion::black_box;
 use criterion::{BenchmarkId, Criterion, Throughput};
 use prs_rs::{
     comp::create_comp_dict,
     decomp::{prs_calculate_decompressed_size, prs_decompress_unsafe},
 };
+use std::hint::black_box;
 
 pub fn bench_create_dict(c: &mut Criterion) {
     let file_names = vec!["Model.bin", "ObjectLayout.bin"];
