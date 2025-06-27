@@ -78,17 +78,16 @@ jobs:
           rust-project-path: "tools/cli/"
           crate-name: "prs-rs-cli"
           use-cache: false # cache is inherited from above job.
+          install-binstall: false # inherited from above job.
 
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
       #       thus as per recommendation of cargo-semver-checks, we're using stable here.
-      - uses: cargo-bins/cargo-binstall@main
-        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
-
       - name: Run cargo-semver-checks
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
         run: |
           # Run semver checks on stable, because nightly sometimes gets borked in cargo-semver-checks.
           rustup +stable target add ${{ matrix.target }}
+          # Note: binstall is available after devops-rust-lightweight-binary call.
           cargo binstall --no-confirm cargo-semver-checks
           cargo +stable semver-checks --target ${{ matrix.target }} --features "c-exports"
 
