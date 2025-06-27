@@ -21,6 +21,6 @@ pub fn generate_pgo_data() {
         unsafe {
             prs_decompress(comp_buf.as_ptr(), decompressed.as_mut_ptr());
         }
-        println!("Processed: {:?}", file);
+        println!("Processed: {file:?}");
     }
 }
