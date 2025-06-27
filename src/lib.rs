@@ -1,9 +1,17 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![feature(allocator_api)]
+
+extern crate alloc;
+
+#[cfg(feature = "std")]
+extern crate std;
 
 pub mod comp;
 pub mod decomp;
 pub mod util;
+
+#[cfg(test)]
+pub mod test_prelude;
 
 #[cfg(feature = "c-exports")]
 pub mod exports;

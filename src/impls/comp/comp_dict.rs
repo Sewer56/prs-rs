@@ -1,10 +1,9 @@
-extern crate alloc;
+use alloc::alloc::Global;
 use alloc::boxed::Box;
 use core::alloc::Allocator;
 use core::ptr::{write, NonNull};
 use core::slice;
 use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
-use std::alloc::Global;
 
 pub(crate) type MaxOffset = u32;
 type FreqCountType = u32;
