@@ -1,4 +1,8 @@
-use std::{fs::{self, File}, io::prelude::Read, path::PathBuf};
+use std::{
+    fs::{self, File},
+    io::prelude::Read,
+    path::PathBuf,
+};
 
 use walkdir::WalkDir;
 
@@ -33,10 +37,9 @@ pub fn get_sample_mod_files() -> Vec<PathBuf> {
         .filter(|entry| entry.file_type().is_file())
         .map(|entry| entry.into_path())
         .collect();
-    
+
     files
 }
-
 
 pub fn load_sample_file(path: PathBuf) -> Vec<u8> {
     let mut file = File::open(path).expect("Unable to open file");
