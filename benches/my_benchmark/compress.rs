@@ -1,6 +1,7 @@
-use criterion::{black_box, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput};
 use prs_rs::comp::prs_compress_unsafe;
 use prs_rs::util::prs_calculate_max_compressed_size;
+use std::hint::black_box;
 
 use crate::util::{get_uncompressed_file_path, load_sample_file};
 
