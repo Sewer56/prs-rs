@@ -1,5 +1,5 @@
+use alloc::alloc::Global;
 use core::alloc::Allocator;
-use std::alloc::Global;
 
 use crate::{
     impls::comp::{

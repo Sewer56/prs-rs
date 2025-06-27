@@ -182,9 +182,8 @@ pub struct Lz77Match {
 
 #[cfg(test)]
 mod tests {
-    use std::alloc::Global;
-
     use super::*;
+    use crate::test_prelude::*;
 
     #[test]
     fn test_longest_match_with_repetition() {

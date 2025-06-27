@@ -11,12 +11,12 @@ pub fn bench_decompress(c: &mut Criterion) {
         let decompressed_len = unsafe { prs_calculate_decompressed_size(compressed.as_slice()) };
         let mut decompressed = vec![0_u8; decompressed_len];
         group.throughput(Throughput::Bytes(decompressed_len as u64));
-        group.bench_function(&format!("can_decompress_file_{}", file_name), |b| {
+        group.bench_function(format!("can_decompress_file_{file_name}"), |b| {
             b.iter(|| unsafe {
                 prs_decompress_unsafe(compressed.as_slice(), decompressed.as_mut_slice())
             })
         });
     }
-    
+
     group.finish();
 }
