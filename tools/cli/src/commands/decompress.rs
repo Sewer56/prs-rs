@@ -15,7 +15,7 @@ pub(crate) fn decompress_files(path: &str) {
                 e.file_type().is_file()
                     && e.path()
                         .extension()
-                        .map_or(false, |ext| ext.eq_ignore_ascii_case("prs"))
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("prs"))
             })
             .par_bridge()
             .for_each(|entry| {
@@ -26,7 +26,7 @@ pub(crate) fn decompress_files(path: &str) {
             });
     } else if path
         .extension()
-        .map_or(false, |ext| ext.eq_ignore_ascii_case("prs"))
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("prs"))
     {
         let path_str = path.to_str().unwrap();
         let output_path = &path_str[..path_str.len() - 4];
