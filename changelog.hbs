@@ -8,7 +8,26 @@ Available Downloads:
 - C Bindings: `C-Library-*`
 - NuGet (C#): [prs_rs.Net.Sys](https://www.nuget.org/packages/prs_rs.Net.Sys)
 
-## Version 1.0.5
+## Version 2.0.2
+
+This release contains a fix for a pointer arithmetic overflow (undefined behaviour).
+
+```
+let offset = read_byte(source) as isize | -0x100; // negative
+let src_addr = dest_local.add(offset as usize);  // ← UB HERE!
+```
+
+Now replaced with
+
+```
+let offset = read_byte(source) as isize | -0x100; // negative
+let src_addr = dest_local.sub((-offset) as usize);
+```
+
+This issue affectes newer Rust compilers; but existing prebuilt binaries in previous releases are to my awareness
+unaffected.
+
+## Version 2.0.0
 
 This version carries the following improvements:
 
