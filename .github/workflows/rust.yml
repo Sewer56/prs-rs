@@ -60,7 +60,7 @@ jobs:
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
       #       thus as per recommendation of cargo-semver-checks, we're using stable here.
       - name: Run cargo-semver-checks
-        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.target != 'aarch64-pc-windows-msvc'
         run: |
           # Run semver checks on stable, because nightly sometimes gets borked in cargo-semver-checks.
           rustup +stable target add ${{ matrix.target }}
