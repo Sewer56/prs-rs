@@ -2,11 +2,11 @@ name: Test, Upload Coverage and Release Rust
 
 on:
   push:
-    branches: [ main, pgo, csharp-bindings, cli ]
+    branches: [main, pgo, csharp-bindings, cli]
     tags:
-      - '*'
+      - "*"
   pull_request:
-    branches: [ main, pgo, csharp-bindings, cli ]
+    branches: [main, pgo, csharp-bindings, cli]
   workflow_dispatch:
 
 jobs:
@@ -50,9 +50,9 @@ jobs:
             target: aarch64-apple-darwin
             use-pgo: true
             use-cross: false
-  
+
     runs-on: ${{ matrix.os }}
-  
+
     steps:
       - uses: actions/checkout@v4
 
@@ -107,14 +107,14 @@ jobs:
         with:
           config-file: cbindgen_cpp.toml
           output-header-file: bindings_cpp.hpp
-          use-cache: 'true'
-  
-      - name: Generate C bindings 
+          use-cache: "true"
+
+      - name: Generate C bindings
         uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config-file: cbindgen_c.toml 
+          config-file: cbindgen_c.toml
           output-header-file: bindings_c.h
-          use-cache: 'false' # Cache inherited from above call.
+          use-cache: "false" # Cache inherited from above call.
 
   build-dotnet-library:
     needs: build-and-test
@@ -132,9 +132,9 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-and-test,build-c-headers,build-dotnet-library]
+    needs: [build-and-test, build-c-headers, build-dotnet-library]
     # Publish only on tags
-    if: startsWith(github.ref, 'refs/tags/') 
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - name: Test Publish Action
@@ -142,4 +142,4 @@ jobs:
         with:
           crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
           nuget-api-key: ${{ secrets.NUGET_KEY }}
-          artifacts-directory: 'artifacts'
+          artifacts-directory: "artifacts"
