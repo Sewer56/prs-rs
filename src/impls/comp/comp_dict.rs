@@ -1,9 +1,7 @@
-use alloc::alloc::Global;
-use alloc::boxed::Box;
-use core::alloc::Allocator;
+use crate::prelude::{Allocator, Box, Global, Layout};
 use core::ptr::{write, NonNull};
 use core::slice;
-use core::{alloc::Layout, mem::size_of, ptr::read_unaligned};
+use core::{mem::size_of, ptr::read_unaligned};
 
 pub(crate) type MaxOffset = u32;
 type FreqCountType = u32;

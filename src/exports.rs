@@ -1,6 +1,6 @@
 use crate::impls::comp::compress;
 use crate::impls::decomp::estimate::prs_calculate_decompressed_size_impl;
-use alloc::alloc::Global;
+use crate::prelude::Global;
 use core::ffi::c_uchar;
 
 /// Compresses the given data in `source`, placing it in `destimation`.

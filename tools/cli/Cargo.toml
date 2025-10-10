@@ -7,6 +7,9 @@ repository = "https://github.com/Sewer56/prs-rs"
 license-file = "LICENSE"
 include = ["**/*"]
 
+[features]
+nightly = ["prs-rs/nightly"]
+
 [dependencies]
 prs-rs = { path = "../.." }
 argh = "0.1.12"

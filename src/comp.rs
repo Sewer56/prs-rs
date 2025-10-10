@@ -1,5 +1,4 @@
-use alloc::alloc::Global;
-use core::alloc::Allocator;
+use crate::prelude::{Allocator, Global};
 
 use crate::{
     impls::comp::{

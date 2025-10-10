@@ -1,9 +1,11 @@
 #![no_std]
-#![feature(allocator_api)]
+#![cfg_attr(feature = "nightly", feature(allocator_api))]
 
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
+
+pub(crate) mod prelude;
 
 pub mod comp;
 pub mod decomp;

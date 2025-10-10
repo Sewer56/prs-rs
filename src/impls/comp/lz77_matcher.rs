@@ -1,5 +1,5 @@
 use super::comp_dict::CompDict;
-use core::alloc::Allocator;
+use crate::prelude::Allocator;
 use core::mem::size_of;
 use core::ptr::read_unaligned;
 

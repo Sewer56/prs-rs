@@ -1,2 +1,2 @@
 //! Common imports for tests
-pub use alloc::alloc::Global;
+pub use crate::prelude::Global;

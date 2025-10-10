@@ -2,7 +2,8 @@ use super::lz77_matcher::{
     lz77_get_longest_match_fast, lz77_get_longest_match_slow, Lz77Match, Lz77Parameters,
 };
 use crate::impls::comp::comp_dict::CompDict;
-use core::{alloc::Allocator, ptr::write_unaligned, slice};
+use crate::prelude::Allocator;
+use core::{ptr::write_unaligned, slice};
 
 /// Size of a CompDict window.
 ///
