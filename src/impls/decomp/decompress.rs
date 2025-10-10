@@ -63,7 +63,7 @@ unsafe fn decode_long_copy(
     };
 
     let dest_local = *dest; // hoist the variable for perf
-    let src_addr = dest_local.add(offset as usize);
+    let src_addr = dest_local.sub((-offset) as usize);
     for i in 0..length {
         *dest_local.add(i) = *src_addr.add(i);
     }
@@ -95,7 +95,7 @@ unsafe fn decode_short_copy(
     // I have no idea how, given complexity of everything, but it does.
     // This ends up being very nice unrolled code copy.
     let dest_local = *dest; // hoist the variable for perf
-    let src_addr = dest_local.add(offset as usize);
+    let src_addr = dest_local.sub((-offset) as usize);
     for i in 0..length {
         *dest_local.add(i) = *src_addr.add(i);
     }
