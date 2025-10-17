@@ -14,11 +14,6 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use decompress::bench_decompress;
 #[cfg(feature = "pgo")]
 use gen_pgo_data::generate_pgo_data;
-#[cfg(all(
-    any(target_os = "linux", target_os = "macos"),
-    any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")
-))]
-use pprof::criterion::{Output, PProfProfiler};
 
 #[allow(unused_variables)]
 fn criterion_benchmark(c: &mut Criterion) {
@@ -38,20 +33,6 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 }
 
-#[cfg(all(
-    any(target_os = "linux", target_os = "macos"),
-    any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")
-))]
-criterion_group! {
-    name = benches;
-    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
-    targets = criterion_benchmark
-}
-
-#[cfg(not(all(
-    any(target_os = "linux", target_os = "macos"),
-    any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")
-)))]
 criterion_group! {
     name = benches;
     config = Criterion::default();
