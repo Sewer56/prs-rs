@@ -1,8 +1,5 @@
-pub mod helpers;
-
-use helpers::samples::get_compressed_file_path;
-use helpers::samples::get_uncompressed_file_path;
-use helpers::samples::load_sample_file;
+mod helpers;
+use helpers::samples::{get_compressed_file_path, get_uncompressed_file_path, load_sample_file};
 use more_asserts::assert_le;
 use prs_rs::decomp::prs_calculate_decompressed_size;
 use prs_rs::util::prs_calculate_max_compressed_size;

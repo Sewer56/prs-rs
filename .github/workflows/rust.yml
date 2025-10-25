@@ -45,6 +45,7 @@ jobs:
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           use-cache: true
           install-binstall: true
+          rust-project-path: "src/prs-rs"
 
       - name: Build CLI Tool
         uses: Reloaded-Project/devops-rust-lightweight-binary@v1 # upgrade if needed
@@ -52,7 +53,7 @@ jobs:
           target: ${{ matrix.target }}
           use-pgo: ${{ matrix.use-pgo }}
           use-cross: ${{ matrix.use-cross }}
-          rust-project-path: "tools/cli/"
+          rust-project-path: "src/cli"
           crate-name: "prs-rs-cli"
           use-cache: false # cache is inherited from above job.
           install-binstall: false # inherited from above job.
@@ -60,7 +61,10 @@ jobs:
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
       #       thus as per recommendation of cargo-semver-checks, we're using stable here.
       - name: Run cargo-semver-checks
-        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.target != 'aarch64-pc-windows-msvc'
+        if:
+          (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.target !=
+          'aarch64-pc-windows-msvc'
+        working-directory: src
         run: |
           # Run semver checks on stable, because nightly sometimes gets borked in cargo-semver-checks.
           rustup +stable target add ${{ matrix.target }}
@@ -70,6 +74,7 @@ jobs:
 
       - name: Build documentation
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        working-directory: src
         run: cargo +nightly doc --no-deps --target ${{ matrix.target }} --features "c-exports"
 
   build-c-headers:
@@ -82,16 +87,18 @@ jobs:
       - name: Generate C++ bindings
         uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config-file: cbindgen_cpp.toml
+          config-file: .github/cbindgen_cpp.toml
           output-header-file: bindings_cpp.hpp
           use-cache: "true"
+          rust-project-path: "src/prs-rs"
 
       - name: Generate C bindings
         uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config-file: cbindgen_c.toml
+          config-file: .github/cbindgen_c.toml
           output-header-file: bindings_c.h
           use-cache: "false" # Cache inherited from above call.
+          rust-project-path: "src/prs-rs"
 
   build-dotnet-library:
     needs: build-and-test
@@ -103,7 +110,7 @@ jobs:
       - name: Build and Package .NET Wrapper
         uses: Reloaded-Project/devops-rust-c-library-to-dotnet@v1
         with:
-          csharp-project-path: bindings/csharp
+          csharp-project-path: src/bindings/csharp
 
   test-release-builds:
     strategy:
@@ -126,6 +133,7 @@ jobs:
           additional-test-args: "--release"
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           setup-rust-cache: true
+          rust-project-path: "src"
 
   publish-crate:
     permissions:
