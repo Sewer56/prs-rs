@@ -153,3 +153,4 @@ jobs:
           crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
           nuget-api-key: ${{ secrets.NUGET_KEY }}
           artifacts-directory: "artifacts"
+          rust-project-paths: "src"
