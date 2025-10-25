@@ -25,7 +25,6 @@ jobs:
           # Obscure Targets
           - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true }
           - { os: ubuntu-latest, target: i686-unknown-linux-gnu, use-pgo: true, use-cross: false }
-          - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false }
 
     runs-on: ${{ matrix.os }}
 
@@ -41,10 +40,11 @@ jobs:
           use-cross: ${{ matrix.use-cross }}
           features: "c-exports"
           build-library: true
-          run-tests-and-coverage: ${{ matrix.target != 'aarch64-pc-windows-msvc' }}
+          run-tests-and-coverage: true
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           use-cache: true
           install-binstall: true
+          pgo-project-path: "src/prs-rs"
           rust-project-path: "src/prs-rs"
           workspace-path: "src"
 
@@ -54,6 +54,7 @@ jobs:
           target: ${{ matrix.target }}
           use-pgo: ${{ matrix.use-pgo }}
           use-cross: ${{ matrix.use-cross }}
+          pgo-project-path: "src/prs-rs"
           rust-project-path: "src/cli"
           crate-name: "prs-rs-cli"
           workspace-path: "src"
@@ -135,7 +136,7 @@ jobs:
           additional-test-args: "--release"
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           setup-rust-cache: true
-          rust-project-path: "src"
+          rust-project-path: "src/prs-rs"
 
   publish-crate:
     permissions:
