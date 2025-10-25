@@ -1,5 +1,6 @@
 use std::{fs::File, io::prelude::Read, path::PathBuf};
 
+#[allow(dead_code)]
 pub fn get_compressed_file_path(file_name: &str) -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("tests");
