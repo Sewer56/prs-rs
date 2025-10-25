@@ -46,6 +46,7 @@ jobs:
           use-cache: true
           install-binstall: true
           rust-project-path: "src/prs-rs"
+          workspace-path: "src"
 
       - name: Build CLI Tool
         uses: Reloaded-Project/devops-rust-lightweight-binary@v1 # upgrade if needed
@@ -55,6 +56,7 @@ jobs:
           use-cross: ${{ matrix.use-cross }}
           rust-project-path: "src/cli"
           crate-name: "prs-rs-cli"
+          workspace-path: "src"
           use-cache: false # cache is inherited from above job.
           install-binstall: false # inherited from above job.
 
@@ -87,7 +89,7 @@ jobs:
       - name: Generate C++ bindings
         uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config-file: .github/cbindgen_cpp.toml
+          config-file: ../../.github/cbindgen_cpp.toml
           output-header-file: bindings_cpp.hpp
           use-cache: "true"
           rust-project-path: "src/prs-rs"
@@ -95,7 +97,7 @@ jobs:
       - name: Generate C bindings
         uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config-file: .github/cbindgen_c.toml
+          config-file: ../../.github/cbindgen_c.toml
           output-header-file: bindings_c.h
           use-cache: "false" # Cache inherited from above call.
           rust-project-path: "src/prs-rs"
