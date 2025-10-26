@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Cargo Watch Test (Auto Test on Save)",
+      "label": "Auto Test on Save",
       "type": "shell",
       "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w prs-rs/src",
       "group": "test",
@@ -15,7 +15,7 @@
       }
     },
     {
-      "label": "Cargo Watch Test (Auto Test on Save, with Integration Tests)",
+      "label": "Auto Test on Save (with Integration Tests)",
       "type": "shell",
       "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w prs-rs/src -w prs-rs/tests",
       "group": "test",
@@ -28,9 +28,9 @@
       }
     },
     {
-      "label": "Cargo Watch Tarpaulin (Auto Coverage on Save)",
+      "label": "Auto Coverage on Save",
       "type": "shell",
-      "command": "cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build --workspace --exclude prs-rs-cli\" -w prs-rs/src",
+      "command": "cargo install cargo-watch --quiet && cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build --workspace --exclude prs-rs-cli\" -w prs-rs/src",
       "group": "test",
       "presentation": {
         "reveal": "always"
