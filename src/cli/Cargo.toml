@@ -13,5 +13,5 @@ nightly = ["prs-rs/nightly"]
 [dependencies]
 prs-rs = { path = "../prs-rs" }
 argh = "0.1.12"
-walkdir = { workspace = true }
+walkdir = "2.4.0"
 rayon = "1.5.1"
