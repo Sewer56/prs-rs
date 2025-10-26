@@ -15,3 +15,6 @@ __pycache__/
 
 # MkDocs build output
 site/
+
+# Prompt files
+PROMPT.MD
