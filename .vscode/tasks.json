@@ -39,6 +39,19 @@
       "options": {
         "cwd": "${workspaceFolder}/src"
       }
+    },
+    {
+      "label": "Fix Clippy Lints",
+      "type": "shell",
+      "command": "cargo clippy --fix --allow-dirty --allow-staged",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
     }
   ]
 }
