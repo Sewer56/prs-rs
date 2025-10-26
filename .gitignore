@@ -5,5 +5,13 @@
 # Python virtual environments
 venv/
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
 # MkDocs build output
 site/

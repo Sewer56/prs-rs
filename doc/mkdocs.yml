@@ -12,7 +12,7 @@ extra:
     #  link: https://twitter.com/thesewer56?lang=en-GB
 
 extra_css:
-  - Reloaded/docs/Stylesheets/extra.css
+  - vendor/Reloaded/Stylesheets/reloaded.css
 
 markdown_extensions:
   - admonition
@@ -57,21 +57,9 @@ plugins:
       htmlmin_opts:
         remove_comments: true
       cache_safe: true
-  - exclude:
-      # Exclude the Theme's own files.
-      glob:
-        - Reloaded/docs/Pages/index.md
-        - Reloaded/docs/Pages/testing-zone.md
-        - Reloaded/docs/*.txt
-        - Reloaded/.gitignore
-        - Reloaded/Readme.md
-        - Reloaded/LICENSE
-        - Reloaded/*.yml
-        - Reloaded/*.py
-        - Reloaded/venv/*
 
 nav:
   - Home: index.md
   - Contributing: contributing.md
-  - License: Reloaded/docs/Pages/license.md
-  - How to Document: Reloaded/docs/Pages/contributing.md
+  - License: license.md
+  - How to Document: https://github.com/Reloaded-Project/Reloaded.MkDocsMaterial.Themes.R2/blob/master/docs/Pages/contributing.md
