@@ -2,15 +2,17 @@
 resolver = "2"
 members = ["prs-rs", "cli"]
 
-
-
 # Profile Build
 [profile.profile]
 inherits = "release"
 debug = true
 codegen-units = 1
 lto = true
-strip = false        # No stripping!!
+strip = false        # symbols are needed for good profile data
+
+# Benchmark Build
+[profile.bench]
+inherits = "profile"
 
 # Optimized Release Build
 [profile.release]
