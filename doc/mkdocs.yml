@@ -47,7 +47,7 @@ plugins:
   - offline
   - search
   - exclude-unused-files:
-      file_types_to_check: ["psd", "7z", "kra"]
+      file_types_to_check: ["psd", "7z", "kra", "avif"]
       file_types_override_mode: append
       enabled: true
   - minify:
@@ -55,13 +55,14 @@ plugins:
       minify_js: true
       minify_css: true
       htmlmin_opts:
-      remove_comments: true
+        remove_comments: true
       cache_safe: true
   - exclude:
       # Exclude the Theme's own files.
       glob:
         - Reloaded/docs/Pages/index.md
         - Reloaded/docs/Pages/testing-zone.md
+        - Reloaded/docs/*.txt
         - Reloaded/.gitignore
         - Reloaded/Readme.md
         - Reloaded/LICENSE
