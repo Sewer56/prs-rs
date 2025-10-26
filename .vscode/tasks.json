@@ -4,7 +4,7 @@
     {
       "label": "Cargo Watch Test (Auto Test on Save)",
       "type": "shell",
-      "command": "cargo watch -x \"test\" -w prs-rs/src",
+      "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w prs-rs/src",
       "group": "test",
       "presentation": {
         "reveal": "always"
@@ -17,7 +17,7 @@
     {
       "label": "Cargo Watch Test (Auto Test on Save, with Integration Tests)",
       "type": "shell",
-      "command": "cargo watch -x \"test\" -w prs-rs/src -w prs-rs/tests",
+      "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w prs-rs/src -w prs-rs/tests",
       "group": "test",
       "presentation": {
         "reveal": "always"
