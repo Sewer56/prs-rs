@@ -91,6 +91,19 @@
       "options": {
         "cwd": "${workspaceFolder}/src"
       }
+    },
+    {
+      "label": "Run Benchmarks",
+      "type": "shell",
+      "command": "cargo bench",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
     }
   ]
 }
