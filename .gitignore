@@ -1,4 +1,6 @@
 # Workspace structure
 /target/
-**/target/
 .idea
+
+# Python virtual environments
+venv/
