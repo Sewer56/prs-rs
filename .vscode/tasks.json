@@ -30,7 +30,7 @@
     {
       "label": "Reloaded: Cargo Watch Tarpaulin (Auto Coverage on Save)",
       "type": "shell",
-      "command": "cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build\" -w prs-rs/src",
+      "command": "cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build --workspace --exclude prs-rs-cli\" -w prs-rs/src",
       "group": "test",
       "presentation": {
         "reveal": "always"
@@ -43,7 +43,7 @@
     {
       "label": "Reloaded: Generate Code Coverage",
       "type": "shell",
-      "command": "cargo install cargo-tarpaulin --quiet && cargo tarpaulin --out Xml --out Html --engine llvm --target-dir target/coverage-build",
+      "command": "cargo install cargo-tarpaulin --quiet && cargo tarpaulin --out Xml --out Html --engine llvm --target-dir target/coverage-build --workspace --exclude prs-rs-cli",
       "group": "test",
       "presentation": {
         "reveal": "always"

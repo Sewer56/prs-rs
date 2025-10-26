@@ -47,6 +47,7 @@ jobs:
           pgo-project-path: "src/prs-rs"
           rust-project-path: "src/prs-rs"
           workspace-path: "src"
+          additional-tarpaulin-flags: "--workspace --exclude prs-rs-cli"
 
       - name: Build CLI Tool
         uses: Reloaded-Project/devops-rust-lightweight-binary@v1 # upgrade if needed
