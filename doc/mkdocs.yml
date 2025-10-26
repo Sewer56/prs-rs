@@ -12,7 +12,7 @@ extra:
     #  link: https://twitter.com/thesewer56?lang=en-GB
 
 extra_css:
-  - Reloaded/Stylesheets/extra.css
+  - Reloaded/docs/Stylesheets/extra.css
 
 markdown_extensions:
   - admonition
@@ -49,5 +49,5 @@ plugins:
 nav:
   - Home: index.md
   - Contributing: contributing.md
-  - License: Reloaded/Pages/license.md
-  - How to Document: Reloaded/Pages/contributing.md
+  - License: Reloaded/docs/Pages/license.md
+  - How to Document: Reloaded/docs/Pages/contributing.md
