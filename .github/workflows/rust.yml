@@ -64,15 +64,13 @@ jobs:
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
       #       thus as per recommendation of cargo-semver-checks, we're using stable here.
       - name: Run cargo-semver-checks
-        if:
-          (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.target !=
-          'aarch64-pc-windows-msvc'
+        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
         working-directory: src
         run: |
           # Run semver checks on stable, because nightly sometimes gets borked in cargo-semver-checks.
           rustup +stable target add ${{ matrix.target }}
           # Note: binstall is available after devops-rust-lightweight-binary call.
-          cargo binstall --no-confirm cargo-semver-checks --force
+          cargo +stable binstall --no-confirm cargo-semver-checks --force
           cargo +stable semver-checks --target ${{ matrix.target }} --features "c-exports"
 
       - name: Build documentation
