@@ -65,6 +65,32 @@
       "options": {
         "cwd": "${workspaceFolder}/doc"
       }
+    },
+    {
+      "label": "Test Cross-Compile: Linux (PowerPC 32-bit) [Big Endian]",
+      "type": "shell",
+      "command": "cargo install cross --git https://github.com/cross-rs/cross --quiet && cross test --target powerpc-unknown-linux-gnu",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "label": "Test Cross-Compile: Linux (PowerPC 64-bit) [Big Endian]",
+      "type": "shell",
+      "command": "cargo install cross --git https://github.com/cross-rs/cross --quiet && cross test --target powerpc64-unknown-linux-gnu",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
     }
   ]
 }

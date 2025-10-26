@@ -26,6 +26,10 @@ jobs:
           - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true }
           - { os: ubuntu-latest, target: i686-unknown-linux-gnu, use-pgo: true, use-cross: false }
 
+          # Big Endian Targets
+          - { os: ubuntu-latest, target: powerpc-unknown-linux-gnu, use-pgo: false, use-cross: true }
+          - { os: ubuntu-latest, target: powerpc64-unknown-linux-gnu, use-pgo: false, use-cross: true }
+
     runs-on: ${{ matrix.os }}
 
     steps:
