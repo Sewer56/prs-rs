@@ -1,3 +1,4 @@
 # Workspace structure
 /target/
 **/target/
+.idea
