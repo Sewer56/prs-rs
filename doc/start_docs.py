@@ -22,7 +22,7 @@ def main():
     subprocess.run([
         sys.executable, 
         str(reloaded_script), 
-        "--target-dir", str(script_dir),
+        "--docs-dir", str(script_dir),
         "--project-name", "prs-rs documentation"
     ], cwd=script_dir)
 
