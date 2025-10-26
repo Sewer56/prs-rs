@@ -39,19 +39,6 @@
       "options": {
         "cwd": "${workspaceFolder}/src"
       }
-    },
-    {
-      "label": "Reloaded: Generate Code Coverage",
-      "type": "shell",
-      "command": "cargo install cargo-tarpaulin --quiet && cargo tarpaulin --out Xml --out Html --engine llvm --target-dir target/coverage-build --workspace --exclude prs-rs-cli",
-      "group": "test",
-      "presentation": {
-        "reveal": "always"
-      },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/src"
-      }
     }
   ]
 }
