@@ -72,7 +72,7 @@ jobs:
           # Run semver checks on stable, because nightly sometimes gets borked in cargo-semver-checks.
           rustup +stable target add ${{ matrix.target }}
           # Note: binstall is available after devops-rust-lightweight-binary call.
-          cargo binstall --no-confirm cargo-semver-checks
+          cargo binstall --no-confirm cargo-semver-checks --force
           cargo +stable semver-checks --target ${{ matrix.target }} --features "c-exports"
 
       - name: Build documentation
