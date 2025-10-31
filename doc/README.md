@@ -43,4 +43,4 @@ This script will:
 
 The documentation will be available at http://127.0.0.1:8000 (paste into browser address bar). Press Ctrl+C to stop the server.
 
-For more detailed contributing guidelines, see https://reloaded-project.github.io/Reloaded.MkDocsMaterial.Themes.R2/Pages/contributing.html
+For more detailed contributing guidelines, see [Contributing Guide](https://reloaded-project.github.io/Reloaded.MkDocsMaterial.Themes.R2/Pages/contributing.html)
