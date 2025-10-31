@@ -25,7 +25,10 @@ jobs:
           # Obscure Targets
           - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true }
           - { os: ubuntu-latest, target: i686-unknown-linux-gnu, use-pgo: true, use-cross: false }
-          - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false }
+
+          # Big Endian Targets
+          - { os: ubuntu-latest, target: powerpc-unknown-linux-gnu, use-pgo: false, use-cross: true }
+          # - { os: ubuntu-latest, target: powerpc64-unknown-linux-gnu, use-pgo: false, use-cross: true } # Need to fix.
 
     runs-on: ${{ matrix.os }}
 
@@ -41,10 +44,14 @@ jobs:
           use-cross: ${{ matrix.use-cross }}
           features: "c-exports"
           build-library: true
-          run-tests-and-coverage: ${{ matrix.target != 'aarch64-pc-windows-msvc' }}
+          run-tests-and-coverage: true
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           use-cache: true
           install-binstall: true
+          pgo-project-path: "src/prs-rs"
+          rust-project-path: "src/prs-rs"
+          workspace-path: "src"
+          additional-tarpaulin-args: "--workspace --exclude prs-rs-cli"
 
       - name: Build CLI Tool
         uses: Reloaded-Project/devops-rust-lightweight-binary@v1 # upgrade if needed
@@ -52,24 +59,28 @@ jobs:
           target: ${{ matrix.target }}
           use-pgo: ${{ matrix.use-pgo }}
           use-cross: ${{ matrix.use-cross }}
-          rust-project-path: "tools/cli/"
+          pgo-project-path: "src/prs-rs"
+          rust-project-path: "src/cli"
           crate-name: "prs-rs-cli"
+          workspace-path: "src"
           use-cache: false # cache is inherited from above job.
           install-binstall: false # inherited from above job.
 
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
       #       thus as per recommendation of cargo-semver-checks, we're using stable here.
       - name: Run cargo-semver-checks
-        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.target != 'aarch64-pc-windows-msvc'
+        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        working-directory: src
         run: |
           # Run semver checks on stable, because nightly sometimes gets borked in cargo-semver-checks.
           rustup +stable target add ${{ matrix.target }}
           # Note: binstall is available after devops-rust-lightweight-binary call.
-          cargo binstall --no-confirm cargo-semver-checks
+          cargo +stable binstall --no-confirm cargo-semver-checks --force
           cargo +stable semver-checks --target ${{ matrix.target }} --features "c-exports"
 
       - name: Build documentation
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        working-directory: src
         run: cargo +nightly doc --no-deps --target ${{ matrix.target }} --features "c-exports"
 
   build-c-headers:
@@ -82,16 +93,18 @@ jobs:
       - name: Generate C++ bindings
         uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config-file: cbindgen_cpp.toml
+          config-file: ../../.github/cbindgen_cpp.toml
           output-header-file: bindings_cpp.hpp
           use-cache: "true"
+          rust-project-path: "src/prs-rs"
 
       - name: Generate C bindings
         uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
-          config-file: cbindgen_c.toml
+          config-file: ../../.github/cbindgen_c.toml
           output-header-file: bindings_c.h
           use-cache: "false" # Cache inherited from above call.
+          rust-project-path: "src/prs-rs"
 
   build-dotnet-library:
     needs: build-and-test
@@ -103,7 +116,7 @@ jobs:
       - name: Build and Package .NET Wrapper
         uses: Reloaded-Project/devops-rust-c-library-to-dotnet@v1
         with:
-          csharp-project-path: bindings/csharp
+          csharp-project-path: src/bindings/csharp
 
   test-release-builds:
     strategy:
@@ -126,6 +139,7 @@ jobs:
           additional-test-args: "--release"
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           setup-rust-cache: true
+          rust-project-path: "src/prs-rs"
 
   publish-crate:
     permissions:
@@ -142,3 +156,4 @@ jobs:
           crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
           nuget-api-key: ${{ secrets.NUGET_KEY }}
           artifacts-directory: "artifacts"
+          rust-project-paths: "src"

@@ -1,5 +1,4 @@
-pub mod helpers;
-
+mod helpers;
 use helpers::samples::{get_uncompressed_file_path, load_sample_file};
 use prs_rs::comp::prs_compress_unsafe;
 use prs_rs::decomp::prs_decompress_unsafe;

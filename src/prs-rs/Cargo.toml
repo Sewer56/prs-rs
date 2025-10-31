@@ -15,7 +15,7 @@ std = []
 nightly = []
 
 # See README.md for more information.
-pgo = [ "c-exports" ]
+pgo = ["c-exports"]
 
 [dependencies]
 allocator-api2 = "0.3.1"
@@ -26,25 +26,10 @@ csbindgen = "1.9.6"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dev-dependencies]
-criterion = "0.7.0" # Don't update while pprof 0.15, because that brings in 0.5.0, incompatible with 0.6+
+criterion = "0.7.0"
 rstest = "0.26.1"
 more-asserts = "0.3.1"
 walkdir = "2.4.0"
-
-# Profile Build
-[profile.profile]
-inherits = "release"
-debug = true
-codegen-units = 1
-lto = true
-strip = false  # No stripping!!
-
-# Optimized Release Build
-[profile.release]
-codegen-units = 1
-lto = true
-strip = true  # Automatically strip symbols from the binary.
-panic = "abort"
 
 # Benchmark Stuff
 [[bench]]

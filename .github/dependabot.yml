@@ -2,7 +2,7 @@ version: 2
 updates:
   # Enable version updates for Cargo
   - package-ecosystem: "cargo"
-    directory: "/"
+    directory: "src"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -40,4 +40,4 @@ updates:
       prefix-development: "Updated:"
       include: "scope"
     # Allow automatic rebasing when conflicts occur
-    rebase-strategy: "auto" 
+    rebase-strategy: "auto"

@@ -2,44 +2,108 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Reloaded: Cargo Watch Test (Auto Test on Save)",
+      "label": "Auto Test on Save",
       "type": "shell",
-      "command": "cargo watch -x \"test\" -w src/",
+      "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w prs-rs/src",
       "group": "test",
       "presentation": {
         "reveal": "always"
       },
       "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
     },
     {
-      "label": "Reloaded: Cargo Watch Test (Auto Test on Save, with Integration Tests)",
+      "label": "Auto Test on Save (with Integration Tests)",
       "type": "shell",
-      "command": "cargo watch -x \"test\" -w src/ -w tests/",
+      "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w prs-rs/src -w prs-rs/tests",
       "group": "test",
       "presentation": {
         "reveal": "always"
       },
       "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
     },
     {
-      "label": "Reloaded: Cargo Watch Tarpaulin (Auto Coverage on Save)",
+      "label": "Auto Coverage on Save",
       "type": "shell",
-      "command": "cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build\" -w src/",
+      "command": "cargo install cargo-watch --quiet && cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build --workspace --exclude prs-rs-cli\" -w prs-rs/src",
       "group": "test",
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
     },
     {
-      "label": "Reloaded: Generate Code Coverage",
+      "label": "Fix Clippy Lints",
       "type": "shell",
-      "command": "cargo install cargo-tarpaulin --quiet && cargo tarpaulin --out Xml --out Html --engine llvm --target-dir target/coverage-build",
+      "command": "cargo clippy --fix --allow-dirty --allow-staged",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "label": "Start Documentation Server (build docs)",
+      "type": "shell",
+      "command": "python3 start_docs.py",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/doc"
+      }
+    },
+    {
+      "label": "Test Cross-Compile: Linux (PowerPC 32-bit) [Big Endian]",
+      "type": "shell",
+      "command": "cargo install cross --git https://github.com/cross-rs/cross --quiet && cross test --target powerpc-unknown-linux-gnu",
       "group": "test",
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "label": "Test Cross-Compile: Linux (PowerPC 64-bit) [Big Endian]",
+      "type": "shell",
+      "command": "cargo install cross --git https://github.com/cross-rs/cross --quiet && cross test --target powerpc64-unknown-linux-gnu",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "label": "Run Benchmarks",
+      "type": "shell",
+      "command": "cargo bench",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      }
     }
   ]
 }

@@ -3,12 +3,7 @@ name: MkDocs Build and Deploy
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
-    paths:
-      - "mkdocs.yml"
-      - "docs/**"
-  pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "mkdocs.yml"
       - "docs/**"
@@ -24,6 +19,7 @@ jobs:
       - name: Deploy MkDocs
         uses: Reloaded-Project/devops-mkdocs@v1
         with:
-          requirements: ./docs/requirements.txt
+          requirements: ./doc/docs/requirements.txt
           publish-to-pages: ${{ github.event_name == 'push' }}
           checkout-current-repo: true
+          config-file: ./doc/mkdocs.yml
