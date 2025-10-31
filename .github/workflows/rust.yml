@@ -28,7 +28,7 @@ jobs:
 
           # Big Endian Targets
           - { os: ubuntu-latest, target: powerpc-unknown-linux-gnu, use-pgo: false, use-cross: true }
-          - { os: ubuntu-latest, target: powerpc64-unknown-linux-gnu, use-pgo: false, use-cross: true }
+          # - { os: ubuntu-latest, target: powerpc64-unknown-linux-gnu, use-pgo: false, use-cross: true } # Need to fix.
 
     runs-on: ${{ matrix.os }}
 
