@@ -6,8 +6,6 @@ members = ["prs-rs", "cli"]
 [profile.profile]
 inherits = "release"
 debug = true
-codegen-units = 1
-lto = true
 strip = false        # symbols are needed for good profile data
 
 # Benchmark Build
