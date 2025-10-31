@@ -17,5 +17,7 @@ __pycache__/
 site/
 
 # Prompt files
+PROMPT.md
+PROMPT-*.md
 PROMPT.MD
 PROMPT-*.MD
