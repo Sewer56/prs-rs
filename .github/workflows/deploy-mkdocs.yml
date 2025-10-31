@@ -7,11 +7,6 @@ on:
     paths:
       - "mkdocs.yml"
       - "docs/**"
-  pull_request:
-    branches: [main]
-    paths:
-      - "mkdocs.yml"
-      - "docs/**"
 
 jobs:
   build:
