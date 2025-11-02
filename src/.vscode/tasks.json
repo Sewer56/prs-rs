@@ -70,6 +70,26 @@
         "reveal": "always"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Generate C Bindings",
+      "type": "shell",
+      "command": "cargo install cbindgen --quiet && cbindgen --config ../.github/cbindgen_c.toml --output bindings/c/prs_rs.h prs-rs",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Generate C++ Bindings",
+      "type": "shell",
+      "command": "cargo install cbindgen --quiet && cbindgen --config ../.github/cbindgen_cpp.toml --output bindings/cpp/prs_rs.hpp prs-rs",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
     }
   ]
 }
