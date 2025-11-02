@@ -9,10 +9,7 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/src"
-      }
+      "problemMatcher": []
     },
     {
       "label": "Auto Test on Save (with Integration Tests)",
@@ -22,10 +19,7 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/src"
-      }
+      "problemMatcher": []
     },
     {
       "label": "Auto Coverage on Save",
@@ -35,10 +29,7 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/src"
-      }
+      "problemMatcher": []
     },
     {
       "label": "Fix Clippy Lints",
@@ -48,23 +39,7 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/src"
-      }
-    },
-    {
-      "label": "Start Documentation Server (build docs)",
-      "type": "shell",
-      "command": "python3 start_docs.py",
-      "group": "build",
-      "presentation": {
-        "reveal": "always"
-      },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/doc"
-      }
+      "problemMatcher": []
     },
     {
       "label": "Test Cross-Compile: Linux (PowerPC 32-bit) [Big Endian]",
@@ -74,10 +49,7 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/src"
-      }
+      "problemMatcher": []
     },
     {
       "label": "Test Cross-Compile: Linux (PowerPC 64-bit) [Big Endian]",
@@ -87,10 +59,7 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/src"
-      }
+      "problemMatcher": []
     },
     {
       "label": "Run Benchmarks",
@@ -100,10 +69,7 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": [],
-      "options": {
-        "cwd": "${workspaceFolder}/src"
-      }
+      "problemMatcher": []
     }
   ]
 }

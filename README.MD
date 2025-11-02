@@ -36,7 +36,9 @@ cargo bench
 
 ### Development
 
-For development setup and contribution guidelines, see the [documentation](docs/).
+To start working on the code, open the `src/` folder in your IDE. The `doc/` folder can be opened separately for documentation work.
+
+For detailed contribution guidelines and development practices, see the [documentation](docs/).
 
 ## C# Bindings
 
