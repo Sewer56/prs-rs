@@ -22,7 +22,7 @@ allocator-api2 = "0.3.1"
 
 # C# Bindings
 [build-dependencies]
-csbindgen = "1.9.6"
+csbindgen = "1.9.7"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dev-dependencies]
