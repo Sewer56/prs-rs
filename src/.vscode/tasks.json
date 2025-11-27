@@ -1,0 +1,95 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Auto Test on Save",
+      "type": "shell",
+      "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w prs-rs/src",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Auto Test on Save (with Integration Tests)",
+      "type": "shell",
+      "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w prs-rs/src -w prs-rs/tests",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Auto Coverage on Save",
+      "type": "shell",
+      "command": "cargo install cargo-watch --quiet && cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build --workspace --exclude prs-rs-cli\" -w prs-rs/src",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Fix Clippy Lints",
+      "type": "shell",
+      "command": "cargo clippy --fix --allow-dirty --allow-staged",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Cross-Compile: Linux (PowerPC 32-bit) [Big Endian]",
+      "type": "shell",
+      "command": "cargo install cross --git https://github.com/cross-rs/cross --quiet && cross test --target powerpc-unknown-linux-gnu",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Cross-Compile: Linux (PowerPC 64-bit) [Big Endian]",
+      "type": "shell",
+      "command": "cargo install cross --git https://github.com/cross-rs/cross --quiet && cross test --target powerpc64-unknown-linux-gnu",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Benchmarks",
+      "type": "shell",
+      "command": "cargo bench",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Generate C Bindings",
+      "type": "shell",
+      "command": "cargo install cbindgen --quiet && cbindgen --config ../.github/cbindgen_c.toml --output bindings/c/prs_rs.h prs-rs",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Generate C++ Bindings",
+      "type": "shell",
+      "command": "cargo install cbindgen --quiet && cbindgen --config ../.github/cbindgen_cpp.toml --output bindings/cpp/prs_rs.hpp prs-rs",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

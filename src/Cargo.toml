@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["prs-rs", "cli"]
+
+# Profile Build
+[profile.profile]
+inherits = "release"
+debug = true
+strip = false        # symbols are needed for good profile data
+
+# Benchmark Build
+[profile.bench]
+inherits = "profile"
+
+# Optimized Release Build
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true      # Automatically strip symbols from the binary.
+panic = "abort"

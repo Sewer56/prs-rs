@@ -1,0 +1,38 @@
+[package]
+name = "prs-rs"
+version = "2.0.2"
+edition = "2021"
+description = "High performance compressor/decompressor for the SEGA PRS Compression scheme"
+repository = "https://github.com/Sewer56/prs-rs"
+license-file = "LICENSE"
+readme = "README.MD"
+include = ["src/**/*"]
+
+[features]
+default = ["std"]
+c-exports = []
+std = []
+nightly = []
+
+# See README.md for more information.
+pgo = ["c-exports"]
+
+[dependencies]
+allocator-api2 = "0.3.1"
+
+# C# Bindings
+[build-dependencies]
+csbindgen = "1.9.6"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dev-dependencies]
+criterion = "0.7.0"
+rstest = "0.26.1"
+more-asserts = "0.3.1"
+walkdir = "2.4.0"
+
+# Benchmark Stuff
+[[bench]]
+name = "my_benchmark"
+path = "benches/my_benchmark/main.rs"
+harness = false

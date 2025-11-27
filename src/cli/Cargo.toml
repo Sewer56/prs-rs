@@ -1,0 +1,17 @@
+[package]
+name = "prs-rs-cli"
+version = "1.0.0"
+edition = "2021"
+description = "High performance compressor/decompressor for the SEGA PRS Compression scheme (CLI Tool)"
+repository = "https://github.com/Sewer56/prs-rs"
+license-file = "LICENSE"
+include = ["**/*"]
+
+[features]
+nightly = ["prs-rs/nightly"]
+
+[dependencies]
+prs-rs = { path = "../prs-rs" }
+argh = "0.1.12"
+walkdir = "2.4.0"
+rayon = "1.5.1"

@@ -3,12 +3,12 @@ name: Auto Changelog
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 jobs:
   generate_and_upload_changelog:
-    runs-on: ubuntu-latest 
-    permissions: 
+    runs-on: ubuntu-latest
+    permissions:
       contents: write
 
     steps:
@@ -21,4 +21,4 @@ jobs:
           override-starting-version: true
           is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
           release-tag: ${{ github.ref_name }}
-          template: changelog.hbs
+          template: .github/changelog.hbs
