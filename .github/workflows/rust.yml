@@ -59,6 +59,7 @@ jobs:
           target: ${{ matrix.target }}
           use-pgo: ${{ matrix.use-pgo }}
           use-cross: ${{ matrix.use-cross }}
+          features: "nightly"
           pgo-project-path: "src/prs-rs"
           rust-project-path: "src/cli"
           crate-name: "prs-rs-cli"
