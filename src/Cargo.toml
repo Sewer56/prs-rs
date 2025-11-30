@@ -6,7 +6,8 @@ members = ["prs-rs", "cli"]
 [profile.profile]
 inherits = "release"
 debug = true
-strip = false        # symbols are needed for good profile data
+strip = false           # symbols are needed for good profile data
+split-debuginfo = "off"
 
 # Benchmark Build
 [profile.bench]
@@ -16,5 +17,7 @@ inherits = "profile"
 [profile.release]
 codegen-units = 1
 lto = true
-strip = true      # Automatically strip symbols from the binary.
-panic = "abort"
+strip = true
+panic = "abort"            # Automatically strip symbols from the binary
+debug = "full"
+split-debuginfo = "packed"
