@@ -33,7 +33,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build C Libraries and Run Tests
         uses: Reloaded-Project/devops-rust-lightweight-binary@v1
@@ -87,7 +87,7 @@ jobs:
   build-c-headers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build and Package .NET Wrapper
         uses: Reloaded-Project/devops-rust-c-library-to-dotnet@v1
@@ -130,7 +130,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Test Release Build
         uses: Reloaded-Project/devops-rust-test-and-coverage@v1
