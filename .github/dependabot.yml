@@ -41,3 +41,14 @@ updates:
       include: "scope"
     # Allow automatic rebasing when conflicts occur
     rebase-strategy: "auto"
+  # Monitor GitHub Actions for dependency updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Etc/UTC"
+    labels:
+      - "dependencies"
+      - "github-actions"
