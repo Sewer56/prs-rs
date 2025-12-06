@@ -38,7 +38,8 @@ jobs:
       - name: Build C Libraries and Run Tests
         uses: Reloaded-Project/devops-rust-lightweight-binary@v1
         with:
-          crate-name: prs-rs
+          artifact-prefix: C-Library
+          upload-symbols-separately: false
           target: ${{ matrix.target }}
           use-pgo: ${{ matrix.use-pgo }}
           use-cross: ${{ matrix.use-cross }}
@@ -62,7 +63,6 @@ jobs:
           features: "nightly"
           pgo-project-path: "src/prs-rs"
           rust-project-path: "src/cli"
-          crate-name: "prs-rs-cli"
           workspace-path: "src"
           use-cache: false # cache is inherited from above job.
           install-binstall: false # inherited from above job.
@@ -152,9 +152,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Test Publish Action
-        uses: Reloaded-Project/devops-publish-action@v1
+        uses: Reloaded-Project/devops-publish-action@v3
         with:
-          crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
-          nuget-api-key: ${{ secrets.NUGET_KEY }}
+          rust-crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
+          csharp-nuget-api-key: ${{ secrets.NUGET_KEY }}
           artifacts-directory: "artifacts"
-          rust-project-paths: "src"
+          rust-cargo-project-paths: "src"
+          compression-tool: 7z
+          artifact-groups: |
+            C-Library:
+              patterns:
+                - "C-Library-*"
+                - "C-Bindings-*"
+              flattens:
+                - "C-Bindings-*"
+              renames:
+                - "C-Library-": ""
+            Symbols:
+              patterns: "*.symbols"
+              renames:
+                - ".symbols": ""
