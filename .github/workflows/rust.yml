@@ -85,6 +85,11 @@ jobs:
         working-directory: src
         run: cargo doc --workspace --all-features --target ${{ matrix.target }}
 
+      - name: Run linter
+        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        working-directory: src
+        run: cargo clippy --workspace --all-features --target ${{ matrix.target }} -- -D warnings
+
   build-c-headers:
     runs-on: ubuntu-latest
     steps:
