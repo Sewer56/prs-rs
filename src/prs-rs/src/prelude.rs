@@ -1,5 +1,5 @@
 //! Allocator API prelude with conditional compilation support
-//! 
+//!
 //! This module provides allocator-related types and traits that work on both
 //! stable and nightly Rust channels. When the "nightly" feature is enabled,
 //! it uses the native allocator API from std/core. Otherwise, it uses the
