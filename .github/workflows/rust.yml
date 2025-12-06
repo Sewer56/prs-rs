@@ -80,10 +80,21 @@ jobs:
           cargo +stable binstall --no-confirm cargo-semver-checks --force
           cargo +stable semver-checks --target ${{ matrix.target }} --features "c-exports"
 
-      - name: Build documentation
+      - name: Check documentation is valid
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
         working-directory: src
-        run: cargo +nightly doc --no-deps --target ${{ matrix.target }} --features "c-exports"
+        run: cargo doc --workspace --all-features --document-private-items --target ${{ matrix.target }}
+
+      - name: Run linter
+        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        working-directory: src
+        run: cargo clippy --workspace --all-features --target ${{ matrix.target }} -- -D warnings
+
+      - name: Run formatter check
+        uses: actions-rust-lang/rustfmt@v1
+        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        with:
+          manifest-path: src/Cargo.toml
 
   build-c-headers:
     runs-on: ubuntu-latest
@@ -161,9 +172,9 @@ jobs:
           rust-cargo-project-paths: "src/prs-rs"
           compression-tool: 7z
           artifact-groups-file: .github/artifact-groups.yml
-          changelog-enabled: 'true'
+          changelog-enabled: "true"
           changelog-template: .github/changelog.hbs
           changelog-is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
           changelog-release-tag: ${{ github.ref_name }}
-          changelog-override-starting-version: 'true'
-          changelog-hide-credit: 'true'
+          changelog-override-starting-version: "true"
+          changelog-hide-credit: "true"
