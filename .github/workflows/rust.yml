@@ -157,6 +157,6 @@ jobs:
           rust-crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
           csharp-nuget-api-key: ${{ secrets.NUGET_KEY }}
           artifacts-directory: "artifacts"
-          rust-cargo-project-paths: "src"
+          rust-cargo-project-paths: "src/prs-rs"
           compression-tool: 7z
           artifact-groups-file: .github/artifact-groups.yml
