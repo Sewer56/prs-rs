@@ -80,7 +80,7 @@ jobs:
           cargo +stable binstall --no-confirm cargo-semver-checks --force
           cargo +stable semver-checks --target ${{ matrix.target }} --features "c-exports"
 
-      - name: Build documentation
+      - name: Check documentation is valid
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
         working-directory: src
         run: cargo doc --workspace --all-features --target ${{ matrix.target }}
@@ -89,6 +89,12 @@ jobs:
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
         working-directory: src
         run: cargo clippy --workspace --all-features --target ${{ matrix.target }} -- -D warnings
+
+      - name: Run formatter check
+        uses: actions-rust-lang/rustfmt@v1
+        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        with:
+          manifest-path: src/Cargo.toml
 
   build-c-headers:
     runs-on: ubuntu-latest
