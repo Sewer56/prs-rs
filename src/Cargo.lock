@@ -460,7 +460,7 @@ dependencies = [
 
 [[package]]
 name = "prs-rs"
-version = "2.0.2"
+version = "2.0.3"
 dependencies = [
  "allocator-api2",
  "criterion",
