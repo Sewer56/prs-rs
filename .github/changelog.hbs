@@ -1,58 +1,13 @@
 # About this Release
 
-Initial Release of the Rust rewrite of dlang-prs.
+No changes in 2.0.3 outside of packaging to make life easier.
 
 Available Downloads:
 
-- Command Line (CLI Program): `prs-rs-cli`
-- C Bindings: `C-Library-*`
-- NuGet (C#): [prs_rs.Net.Sys](https://www.nuget.org/packages/prs_rs.Net.Sys)
-
-## Version 2.0.2
-
-Fixed decompression failures in release builds on newer Rust compilers.
-
-```rust
-// Obtain the offset. (negative i32, truncated to byte)
-// We lost our negative sign when we originally wrote the offset, doing -0x100 will restore it.
-let offset = read_byte(source) as isize | -0x100;
-let src_addr = dest_local.add(offset as usize); // ← Undefined Behaviour HERE, offset may be huge, causing
-overflow/wrapping
-```
-
-Now replaced with:
-
-```rust
-let offset = read_byte(source) as isize | -0x100;
-let src_addr = dest_local.wrapping_add(offset as usize); // ← No UB. Wrapping is explicitly allowed.
-```
-
-No change in generated assembly from before.
-
-There was an error in my code, where I wrote `add()` instead of `wrapping_add()`.
-
-Newer Rust compilers found an optimization, under the assumption the value cannot overflow;
-but because this wasn't true, newer source builds on newer compilers produced incorrect code. This fixes it.
-
-Previous binaries are safe; including C & C# libraries- this only affects source builds with newer compilers.
-CI now also tests release mode; just in case.
-
-Also added support for custom allocators with non-nightly Rust.
-
-## Version 2.0.0
-
-This version carries the following improvements:
-
-- Compressor 'Dictionary' will be reused (if possible) when compressing last block.
-* Improves performance by ~1.5% on 132KB files.
-
-- Added Support for Custom Memory Allocators (Rust API Only)
-* This allows you to split up the short and long lived memory allocations.
-* Potentially useful if compressing in real time.
-
-- Fixed regression where long sequences of repeated bytes compressed slower than they should.
-* This happened because zero extending bytes (`movzx`) was slower than reading a pure `u32` in x86.
-* Improves speed from 200MB to 400MB/s on a file of pure `00`s.
+- Command Line (CLI Program): `linux-x64.7z`, `windows-x64.7z` etc.
+- Symbols for Command Line: `Symbols.7z`
+- C Library: `C-Library.7z` (has Symbols)
+- NuGet (C#): [prs_rs.Net.Sys](https://www.nuget.org/packages/prs_rs.Net.Sys) on NuGet
 
 ## Complete Changelog
 
