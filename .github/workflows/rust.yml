@@ -61,6 +61,7 @@ jobs:
           use-pgo: ${{ matrix.use-pgo }}
           use-cross: ${{ matrix.use-cross }}
           features: "nightly"
+          artifact-name-exclude-features: "c-exports,nightly"
           pgo-project-path: "src/prs-rs"
           rust-project-path: "src/cli"
           workspace-path: "src"
