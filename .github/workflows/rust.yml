@@ -161,3 +161,9 @@ jobs:
           rust-cargo-project-paths: "src/prs-rs"
           compression-tool: 7z
           artifact-groups-file: .github/artifact-groups.yml
+          changelog-enabled: 'true'
+          changelog-template: .github/changelog.hbs
+          changelog-is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
+          changelog-release-tag: ${{ github.ref_name }}
+          changelog-override-starting-version: 'true'
+          changelog-hide-credit: 'true'
