@@ -19,10 +19,10 @@ fn main() {
 
     match toplevel.nested {
         Commands::Compress(cmd) => {
-            compress_files(&cmd.source);
+            compress_files(&cmd.source, cmd.target.as_deref());
         }
         Commands::Decompress(cmd) => {
-            decompress_files(&cmd.source);
+            decompress_files(&cmd.source, cmd.target.as_deref());
         }
         Commands::Test(cmd) => {
             test_compression(&cmd.source);

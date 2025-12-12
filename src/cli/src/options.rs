@@ -23,6 +23,10 @@ pub(crate) struct CompressCommand {
     /// path to the file to compress, or directory of files to compress
     #[argh(option)]
     pub(crate) source: String,
+
+    /// output path for compressed file(s). If omitted, outputs next to source with .prs extension and deletes original
+    #[argh(option)]
+    pub(crate) target: Option<String>,
 }
 
 /// Decompresses all PRS files in the given directory.
@@ -32,6 +36,10 @@ pub(crate) struct DecompressCommand {
     /// path to the file to decompress, or directory of files to decompress
     #[argh(option)]
     pub(crate) source: String,
+
+    /// output path for decompressed file(s). If omitted, outputs next to source without .prs extension and deletes original
+    #[argh(option)]
+    pub(crate) target: Option<String>,
 }
 
 /// Tests that the compressor round trips, by compressing, calculating size and decompressing.
