@@ -97,10 +97,35 @@ pub unsafe fn prs_compress<L: Allocator + Copy, S: Allocator + Copy>(
         dict.init(window_slice, window_start);
 
         // Process the current window.
-        while source_ofs < window_end.min(fast_processing_end) {
-            let result = lz77_get_longest_match_fast::<CompressParameters, L, S>(
+        let fast_limit = window_end.min(fast_processing_end);
+        while source_ofs < fast_limit {
+            let mut result = lz77_get_longest_match_fast::<CompressParameters, L, S>(
                 &mut dict, source, source_ofs,
             );
+
+            // Lazy matching: inner loop to chain deferrals without recomputation
+            while result.length >= 2 && source_ofs + 1 < fast_limit {
+                let next_result = lz77_get_longest_match_fast::<CompressParameters, L, S>(
+                    &mut dict,
+                    source,
+                    source_ofs + 1,
+                );
+
+                if next_result.length > result.length {
+                    // Emit literal and advance, reusing next_result
+                    append_control_bit(
+                        1,
+                        &mut dest,
+                        &mut control_bit_position,
+                        &mut control_byte_ptr,
+                    );
+                    append_byte(*source.add(source_ofs), &mut dest);
+                    source_ofs += 1;
+                    result = next_result;
+                } else {
+                    break;
+                }
+            }
 
             encode_lz77_match(
                 result,
@@ -124,10 +149,36 @@ pub unsafe fn prs_compress<L: Allocator + Copy, S: Allocator + Copy>(
         dict.init(window_slice, window_start);
     }
 
-    while source_ofs < source_len.saturating_sub(1) {
-        let result = lz77_get_longest_match_slow::<CompressParameters, L, S>(
+    let slow_limit = source_len.saturating_sub(1);
+    while source_ofs < slow_limit {
+        let mut result = lz77_get_longest_match_slow::<CompressParameters, L, S>(
             &mut dict, source, source_len, source_ofs,
         );
+
+        // Lazy matching for slow path
+        while result.length >= 2 && source_ofs + 1 < slow_limit {
+            let next_result = lz77_get_longest_match_slow::<CompressParameters, L, S>(
+                &mut dict,
+                source,
+                source_len,
+                source_ofs + 1,
+            );
+
+            if next_result.length > result.length {
+                // Emit literal and advance, reusing next_result
+                append_control_bit(
+                    1,
+                    &mut dest,
+                    &mut control_bit_position,
+                    &mut control_byte_ptr,
+                );
+                append_byte(*source.add(source_ofs), &mut dest);
+                source_ofs += 1;
+                result = next_result;
+            } else {
+                break;
+            }
+        }
 
         encode_lz77_match(
             result,
