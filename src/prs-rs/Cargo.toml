@@ -18,7 +18,7 @@ nightly = []
 pgo = ["c-exports"]
 
 [dependencies]
-allocator-api2 = "0.3.1"
+allocator-api2 = "0.4.0"
 
 # C# Bindings
 [build-dependencies]
