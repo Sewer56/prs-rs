@@ -12,6 +12,6 @@ nightly = ["prs-rs/nightly"]
 
 [dependencies]
 prs-rs = { path = "../prs-rs" }
-argh = "0.1.12"
+argh = "0.1.14"
 walkdir = "2.4.0"
 rayon = "1.5.1"
