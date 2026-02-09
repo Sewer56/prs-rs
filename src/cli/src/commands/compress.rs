@@ -50,10 +50,8 @@ fn compress_directory_to_target(source_dir: &Path, target_dir: &Path) {
             let relative_path = input_path.strip_prefix(source_dir).unwrap();
             // Build output path: target_dir + relative_path + .prs
             let mut output_path = target_dir.join(relative_path);
-            let new_filename = format!(
-                "{}.prs",
-                output_path.file_name().unwrap().to_string_lossy()
-            );
+            let new_filename =
+                format!("{}.prs", output_path.file_name().unwrap().to_string_lossy());
             output_path.set_file_name(new_filename);
 
             // Ensure parent directory exists for recursive structures
@@ -68,10 +66,7 @@ fn compress_directory_to_target(source_dir: &Path, target_dir: &Path) {
 fn compress_file_to_target(source_file: &Path, target: &Path) {
     let output_path = if target.is_dir() {
         // Target is a directory, use source filename with .prs extension
-        let filename = format!(
-            "{}.prs",
-            source_file.file_name().unwrap().to_string_lossy()
-        );
+        let filename = format!("{}.prs", source_file.file_name().unwrap().to_string_lossy());
         target.join(filename)
     } else {
         // Target is a file path, use as-is
